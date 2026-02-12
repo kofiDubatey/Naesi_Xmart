@@ -1,7 +1,38 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = 'https://qsbbjdehjjckybkihiqk.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFzYmJqZGVoampja3lia2loaXFrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA3MzYyODcsImV4cCI6MjA4NjMxMjI4N30.UAYia0rIbYBCXFBq36t-rTQh3h_IoLima0HVkKUGRCM';
+/**
+ * Robust environment variable retrieval.
+ * We check if 'process' is defined to avoid ReferenceErrors in pure browser environments.
+ * If variables are missing, we fall back to placeholders to prevent createClient from throwing an immediate error.
+ */
+const getEnv = (key: string): string => {
+  try {
+    return (typeof process !== 'undefined' && process.env && process.env[key]) || '';
+  } catch {
+    return '';
+  }
+};
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const supabaseUrl = getEnv('SUPABASE_URL');
+const supabaseAnonKey = getEnv('SUPABASE_ANON_KEY');
+
+/**
+ * CRITICAL FIX: supabase-js throws an error if initialized with an empty string.
+ * We use dummy values if the real ones are missing so the App can mount and 
+ * the 'dbError' logic in App.tsx can show a friendly error message to the user.
+ */
+const validUrl = supabaseUrl && supabaseUrl.startsWith('http') 
+  ? supabaseUrl 
+  : 'https://missing-project-url.supabase.co';
+  
+const validKey = supabaseAnonKey || 'missing-anon-key';
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.warn(
+    "SUPABASE_CONFIG_MISSING: The application is running without valid Supabase credentials. " +
+    "Please ensure SUPABASE_URL and SUPABASE_ANON_KEY are set in your Netlify/Environment variables."
+  );
+}
+
+export const supabase = createClient(validUrl, validKey);
