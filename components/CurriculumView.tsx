@@ -33,11 +33,26 @@ const CurriculumView: React.FC<CurriculumViewProps> = ({ materials, courses, set
     });
   }, [materials, filterType, searchQuery]);
 
+  // Robust API Key retrieval
+  const getApiKey = () => {
+    try {
+      if (typeof window !== 'undefined' && (window as any).process?.env?.API_KEY) return (window as any).process.env.API_KEY;
+      if (typeof process !== 'undefined' && process.env?.API_KEY) return process.env.API_KEY;
+    } catch (e) {}
+    return '';
+  };
+
   const fetchGlobalSummary = async () => {
     if (materials.length === 0) return;
     setIsSummarizing(true);
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const apiKey = getApiKey();
+      if (!apiKey) {
+        setGlobalSummary("NEURAL_SYNC_UNAVAILABLE: API_KEY missing from environment.");
+        return;
+      }
+
+      const ai = new GoogleGenAI({ apiKey });
       const aggregateContent = materials.slice(0, 10).map(m => `--- ${m.title} ---\n${m.content.substring(0, 500)}`).join('\n\n');
       
       const response = await ai.models.generateContent({
@@ -84,8 +99,6 @@ const CurriculumView: React.FC<CurriculumViewProps> = ({ materials, courses, set
   return (
     <div className="space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-700 pb-24">
       <section className="glass p-10 rounded-[50px] border border-cyan-500/20 relative overflow-hidden bg-gradient-to-br from-cyan-500/10 via-transparent to-transparent">
-        <div className="hud-corner hud-tl border-cyan-400"></div>
-        <div className="hud-corner hud-br border-cyan-400"></div>
         <header className="mb-10">
            <p className="text-cyan-400 text-[10px] font-bold uppercase tracking-[0.4em] mb-2 flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
