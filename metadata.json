@@ -1,0 +1,8 @@
+{
+  "name": "Naesi Xmart - AI Pharmacy Academy",
+  "description": "A futuristic AI-powered learning platform for pharmacy students featuring dynamic quiz generation, study groups, and personalized progress tracking.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
