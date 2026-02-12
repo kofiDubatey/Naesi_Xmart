@@ -107,6 +107,21 @@
         .hud-tr { top: 0; right: 0; border-width: 2px 2px 0 0; }
         .hud-bl { bottom: 0; left: 0; border-width: 0 0 2px 2px; }
         .hud-br { bottom: 0; right: 0; border-width: 0 2px 2px 0; }
+        
+        #error-display {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            background: rgba(220, 38, 38, 0.9);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            z-index: 9999;
+            display: none;
+        }
     </style>
 <script type="importmap">
 {
@@ -123,9 +138,18 @@
 </script>
 </head>
 <body class="scanlines">
+    <div id="error-display"></div>
+    <script>
+        window.onerror = function(message, source, lineno, colno, error) {
+            const display = document.getElementById('error-display');
+            display.style.display = 'block';
+            display.innerHTML = '<strong>RUNTIME_ERROR:</strong> ' + message + '<br><small>' + source + ' [Line: ' + lineno + ']</small>';
+        };
+    </script>
     <div class="bg-mesh"></div>
     <div class="glow-orb bg-cyan-500" style="top: -10%; left: -10%;"></div>
     <div class="glow-orb bg-indigo-500" style="bottom: -10%; right: -10%;"></div>
     <div id="root"></div>
+    <script type="module" src="./index.tsx"></script>
 </body>
 </html>

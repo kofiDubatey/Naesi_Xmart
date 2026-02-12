@@ -20,7 +20,6 @@ const NexusChat: React.FC<NexusChatProps> = ({ courses, materials, userId, onAwa
   const [history, setHistory] = useState<ChatMessage[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [savedDiscussions, setSavedDiscussions] = useState<SavedDiscussion[]>([]);
-  const [activeDiscussionId, setActiveDiscussionId] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   const selectedCourse = useMemo(() => courses.find(c => c.id === selectedCourseId), [courses, selectedCourseId]);
@@ -46,15 +45,28 @@ const NexusChat: React.FC<NexusChatProps> = ({ courses, materials, userId, onAwa
     if (data) setSavedDiscussions(data);
   };
 
+  const getApiKey = (): string => {
+    try {
+      if (typeof process !== 'undefined' && process.env?.API_KEY) return process.env.API_KEY;
+      if ((window as any).process?.env?.API_KEY) return (window as any).process.env.API_KEY;
+    } catch (e) {}
+    return '';
+  };
+
   const startNewDiscussion = (courseId: string) => {
     setSelectedCourseId(courseId);
     setHistory([]);
-    setActiveDiscussionId(null);
   };
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || !selectedCourseId || isTyping) return;
+
+    const apiKey = getApiKey();
+    if (!apiKey) {
+      setHistory([...history, { role: 'model', parts: [{ text: "NEURAL_LINK_FAILURE: API_KEY is missing from environment." }] }]);
+      return;
+    }
 
     const userMessage: ChatMessage = { role: 'user', parts: [{ text: input }] };
     const newHistory = [...history, userMessage];
@@ -63,7 +75,7 @@ const NexusChat: React.FC<NexusChatProps> = ({ courses, materials, userId, onAwa
     setIsTyping(true);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const ai = new GoogleGenAI({ apiKey });
       const selectedMaterials = courseMaterials.filter(m => activeMaterialIds.has(m.id));
       const context = selectedMaterials.length > 0 
         ? `Knowledge nodes: ${selectedMaterials.map(m => m.title).join(', ')}`
@@ -78,8 +90,9 @@ const NexusChat: React.FC<NexusChatProps> = ({ courses, materials, userId, onAwa
       const modelMessage: ChatMessage = { role: 'model', parts: [{ text: response.text }] };
       const updatedHistory = [...newHistory, modelMessage];
       setHistory(updatedHistory);
+      onAwardPoints(5, "Knowledge Exchange Performed");
     } catch (err) {
-      setHistory([...newHistory, { role: 'model', parts: [{ text: "NEURAL_LINK_FAILURE." }] }]);
+      setHistory([...newHistory, { role: 'model', parts: [{ text: "NEURAL_LINK_FAILURE: Connection to GenAI gateway interrupted." }] }]);
     } finally {
       setIsTyping(false);
     }
@@ -122,6 +135,7 @@ const NexusChat: React.FC<NexusChatProps> = ({ courses, materials, userId, onAwa
         {!selectedCourseId ? (
           <div className="flex-1 flex flex-col items-center justify-center p-12 text-center">
              <h3 className="text-2xl font-bold font-space text-white uppercase tracking-tighter mb-2">Nexus Terminal Offline</h3>
+             <p className="text-xs text-slate-500 uppercase tracking-widest">Select a curriculum module to initiate neural link</p>
           </div>
         ) : (
           <>
@@ -140,13 +154,13 @@ const NexusChat: React.FC<NexusChatProps> = ({ courses, materials, userId, onAwa
                   </div>
                 </div>
               ))}
-              {isTyping && <div className="text-[10px] text-slate-500 animate-pulse">SYNTHESIZING...</div>}
+              {isTyping && <div className="text-[10px] text-slate-500 animate-pulse uppercase tracking-widest">Synthesizing_Analysis...</div>}
               <div ref={chatEndRef} />
             </div>
             <form onSubmit={handleSend} className="p-8 bg-slate-950/50 border-t border-white/5">
                 <div className="flex gap-4">
-                  <input type="text" value={input} onChange={e => setInput(e.target.value)} placeholder="Consult nexus..." className="flex-1 bg-slate-900 border border-white/10 rounded-2xl px-8 py-5 focus:border-cyan-500 outline-none text-white" />
-                  <button type="submit" disabled={isTyping} className="px-8 bg-cyan-600 hover:bg-cyan-500 text-slate-950 rounded-2xl font-bold">Transmit</button>
+                  <input type="text" value={input} onChange={e => setInput(e.target.value)} placeholder="Consult nexus..." className="flex-1 bg-slate-900 border border-white/10 rounded-2xl px-8 py-5 focus:border-cyan-500 outline-none text-white placeholder:text-slate-700" />
+                  <button type="submit" disabled={isTyping} className="px-8 bg-cyan-600 hover:bg-cyan-500 text-slate-950 rounded-2xl font-bold uppercase text-[10px] tracking-widest transition-all">Transmit</button>
                 </div>
             </form>
           </>
