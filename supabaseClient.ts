@@ -2,37 +2,37 @@
 import { createClient } from '@supabase/supabase-js';
 
 /**
- * Robust environment variable retrieval.
- * We check if 'process' is defined to avoid ReferenceErrors in pure browser environments.
- * If variables are missing, we fall back to placeholders to prevent createClient from throwing an immediate error.
+ * Robust environment variable retrieval for browser-based ESM environments.
+ * If 'process' is not defined (standard browser), we return an empty string 
+ * rather than throwing a ReferenceError, allowing the UI to mount and show 
+ * a proper connection error.
  */
-const getEnv = (key: string): string => {
+const getSafeEnv = (key: string): string => {
   try {
-    return (typeof process !== 'undefined' && process.env && process.env[key]) || '';
-  } catch {
-    return '';
+    // We check typeof process first to avoid ReferenceError in strictly browser contexts
+    if (typeof process !== 'undefined' && process.env) {
+      return process.env[key] || '';
+    }
+  } catch (e) {
+    // Fallback for environments where 'process' is restricted
   }
+  return '';
 };
 
-const supabaseUrl = getEnv('SUPABASE_URL');
-const supabaseAnonKey = getEnv('SUPABASE_ANON_KEY');
+const supabaseUrl = getSafeEnv('SUPABASE_URL');
+const supabaseAnonKey = getSafeEnv('SUPABASE_ANON_KEY');
 
-/**
- * CRITICAL FIX: supabase-js throws an error if initialized with an empty string.
- * We use dummy values if the real ones are missing so the App can mount and 
- * the 'dbError' logic in App.tsx can show a friendly error message to the user.
- */
-const validUrl = supabaseUrl && supabaseUrl.startsWith('http') 
+// If credentials are missing, we use non-empty placeholders. 
+// supabase-js will not throw an error during 'createClient' if the URL is a valid format.
+// This allows App.tsx to load and display the 'Neural Gateway Offline' screen instead of a blank page.
+const finalUrl = (supabaseUrl && supabaseUrl.startsWith('http')) 
   ? supabaseUrl 
-  : 'https://missing-project-url.supabase.co';
-  
-const validKey = supabaseAnonKey || 'missing-anon-key';
+  : 'https://placeholder-project.supabase.co';
+
+const finalKey = supabaseAnonKey || 'placeholder-anon-key';
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn(
-    "SUPABASE_CONFIG_MISSING: The application is running without valid Supabase credentials. " +
-    "Please ensure SUPABASE_URL and SUPABASE_ANON_KEY are set in your Netlify/Environment variables."
-  );
+  console.warn("SYNAPSE_CORE_WARNING: Supabase environment variables are missing. Ensure SUPABASE_URL and SUPABASE_ANON_KEY are set in Netlify.");
 }
 
-export const supabase = createClient(validUrl, validKey);
+export const supabase = createClient(finalUrl, finalKey);

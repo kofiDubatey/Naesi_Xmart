@@ -2,10 +2,30 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { QuizQuestion, Flashcard, StudyGuide } from "../types";
 
-const getAiClient = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
+/**
+ * Safely retrieves the API_KEY from the environment.
+ */
+const getApiKey = (): string => {
+  try {
+    if (typeof process !== 'undefined' && process.env) {
+      return process.env.API_KEY || '';
+    }
+  } catch (e) {}
+  return '';
+};
+
+const getAiClient = () => {
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    console.error("AI_INITIALIZATION_ERROR: API_KEY is missing from environment variables.");
+  }
+  return new GoogleGenAI({ apiKey });
+};
 
 const wrapAiCall = async <T>(fn: () => Promise<T>, fallback: T, name: string): Promise<T> => {
   try {
+    const apiKey = getApiKey();
+    if (!apiKey) throw new Error("API_KEY_MISSING");
     return await fn();
   } catch (error: any) {
     console.error(`[AI Service] ${name} Failure:`, error);
