@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { GoogleGenAI } from "@google/genai";
 import { Course, Material, ChatMessage, SavedDiscussion } from '../types';
 import { supabase } from '../supabaseClient';
 import { ICONS } from '../constants';
+import { getAiClient } from '../services/geminiService';
 import FormattedText from './FormattedText';
 
 interface NexusChatProps {
@@ -60,8 +60,7 @@ const NexusChat: React.FC<NexusChatProps> = ({ courses, materials, userId, onAwa
     setIsTyping(true);
 
     try {
-      const apiKey = process.env.API_KEY;
-      const ai = new GoogleGenAI({ apiKey });
+      const ai = getAiClient();
       
       const selectedMaterials = courseMaterials.filter(m => activeMaterialIds.has(m.id));
       const context = selectedMaterials.length > 0 
@@ -80,9 +79,10 @@ const NexusChat: React.FC<NexusChatProps> = ({ courses, materials, userId, onAwa
       onAwardPoints(5, "Knowledge Exchange Performed");
     } catch (err: any) {
       console.error("AI Communication Failure:", err);
+      const errorMsg = err.message || 'Connection Interrupted';
       setHistory([...newHistory, { 
         role: 'model', 
-        parts: [{ text: `NEURAL_LINK_FAILURE: ${err.message || 'Connection to GenAI gateway interrupted'}. Please ensure the environment is synchronized and try again.` }] 
+        parts: [{ text: `NEURAL_LINK_FAILURE: ${errorMsg}. Please ensure the environment is correctly linked and synchronized.` }] 
       }]);
     } finally {
       setIsTyping(false);

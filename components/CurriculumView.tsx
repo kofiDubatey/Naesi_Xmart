@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Material, Course } from '../types';
-import { GoogleGenAI } from "@google/genai";
 import { ICONS } from '../constants';
 import { supabase } from '../supabaseClient';
+import { getAiClient } from '../services/geminiService';
 import FormattedText from './FormattedText';
 
 interface CurriculumViewProps {
@@ -36,10 +36,7 @@ const CurriculumView: React.FC<CurriculumViewProps> = ({ materials, courses, set
     if (materials.length === 0) return;
     setIsSummarizing(true);
     try {
-      // Injected automatically by platform
-      const apiKey = process.env.API_KEY;
-      const ai = new GoogleGenAI({ apiKey });
-      
+      const ai = getAiClient();
       const aggregateContent = materials.slice(0, 10).map(m => `--- ${m.title} ---\n${m.content.substring(0, 500)}`).join('\n\n');
       
       const response = await ai.models.generateContent({
@@ -53,7 +50,12 @@ const CurriculumView: React.FC<CurriculumViewProps> = ({ materials, courses, set
       setGlobalSummary(response.text || "Insight manifested but stream is silent.");
     } catch (err: any) {
       console.error("Global summary failure:", err);
-      setGlobalSummary(`Unable to synchronize global insights: ${err.message || 'Connection Interrupted'}`);
+      const errorMsg = err.message || 'Connection Interrupted';
+      if (errorMsg.includes('API_KEY_MISSING')) {
+        setGlobalSummary("NEURAL_SYNC_UNAVAILABLE: API_KEY is not configured in the environment.");
+      } else {
+        setGlobalSummary(`Unable to synchronize global insights: ${errorMsg}`);
+      }
     } finally {
       setIsSummarizing(false);
     }

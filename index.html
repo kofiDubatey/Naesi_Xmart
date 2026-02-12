@@ -48,24 +48,26 @@
             text-align: center;
         }
     </style>
-    <!-- REFINED: Browser process.env Polyfill -->
+    <!-- ADVANCED: Neural process.env Harmonizer -->
     <script>
-      // Safely initialize process.env without overwriting platform-injected values
-      window.process = window.process || {};
-      window.process.env = window.process.env || {};
-      
-      window.onerror = function(msg, url, lineNo, columnNo, error) {
-        if (msg.toLowerCase().includes('fetch') || msg.toLowerCase().includes('script error')) {
-            return false;
-        }
-        const overlay = document.getElementById('error-overlay');
-        const msgEl = document.getElementById('error-message');
-        if (overlay && msgEl) {
-          overlay.style.display = 'flex';
-          msgEl.innerText = msg + '\nAt: ' + url + ' [Line: ' + lineNo + ']';
-        }
-        return false;
-      };
+      (function() {
+        window.process = window.process || {};
+        window.process.env = window.process.env || {};
+        
+        // Error capture for diagnostic overlay
+        window.onerror = function(msg, url, lineNo, columnNo, error) {
+          if (msg.toLowerCase().includes('fetch') || msg.toLowerCase().includes('script error')) {
+              return false;
+          }
+          const overlay = document.getElementById('error-overlay');
+          const msgEl = document.getElementById('error-message');
+          if (overlay && msgEl) {
+            overlay.style.display = 'flex';
+            msgEl.innerText = msg + '\nAt: ' + url + ' [Line: ' + lineNo + ']';
+          }
+          return false;
+        };
+      })();
     </script>
 <script type="importmap">
 {
