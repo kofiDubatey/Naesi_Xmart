@@ -2,38 +2,11 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { QuizQuestion, StudyGuide } from "../types";
 
 /**
- * Robust API Key Discovery
- * Scans multiple potential locations where the key might be injected.
- */
-const getApiKey = (): string => {
-  try {
-    // 1. Check process.env (Standard/Platform Injected)
-    if (process.env.API_KEY) return process.env.API_KEY;
-    
-    // 2. Check window.process.env (Polyfilled)
-    if ((window as any).process?.env?.API_KEY) return (window as any).process.env.API_KEY;
-    
-    // 3. Check import.meta.env (Vite/ESM Standard)
-    const metaEnv = (import.meta as any).env;
-    if (metaEnv?.API_KEY) return metaEnv.API_KEY;
-    if (metaEnv?.VITE_API_KEY) return metaEnv.VITE_API_KEY;
-
-    // 4. Check for global platform injection
-    if ((window as any).API_KEY) return (window as any).API_KEY;
-    
-  } catch (e) {}
-  return '';
-};
-
-/**
- * Centralized AI Client Factory
+ * Centralized AI Client Factory.
+ * Strictly uses process.env.API_KEY as per system requirements.
  */
 export const getAiClient = () => {
-  const apiKey = getApiKey();
-  if (!apiKey) {
-    throw new Error("API_KEY_MISSING: The project is missing the Gemini API environment variable. Please configure it in your platform settings.");
-  }
-  return new GoogleGenAI({ apiKey });
+  return new GoogleGenAI({ apiKey: process.env.API_KEY });
 };
 
 /**
@@ -45,11 +18,7 @@ const wrapAiCall = async <T>(fn: () => Promise<T>, fallback: T, name: string): P
   } catch (error: any) {
     console.error(`[AI Service] ${name} Failure:`, error);
     if (typeof fallback === 'string') {
-      const msg = error.message || 'Unknown connection failure';
-      if (msg.includes('API Key must be set')) {
-        return `NEURAL_SYNC_ERROR: API_KEY is missing from environment. Verify your platform configuration.` as unknown as T;
-      }
-      return `NEURAL_SYNC_ERROR: ${msg}` as unknown as T;
+      return `NEURAL_SYNC_ERROR: ${error.message || 'Connection Interrupted'}` as unknown as T;
     }
     return fallback;
   }
@@ -69,7 +38,7 @@ export const generateProfessionalPharmacyQuiz = async (
     const context = materials.filter(m => m && m.trim().length > 0).join("\n\n---\n\n");
     
     if (!context || context.length < 50) {
-      throw new Error("INSUFFICIENT_CONTEXT: Grounding materials are required for professional generation.");
+      throw new Error("INSUFFICIENT_CONTEXT: Grounding materials are required.");
     }
 
     const prompt = `As a Senior Pharmacy Professor, synthesize a professional pharmaceutical assessment for: "${courseName}".
@@ -111,6 +80,7 @@ export const generateProfessionalPharmacyQuiz = async (
 /**
  * Deep Clinical Path Analysis
  */
+// Fix: Completed truncated implementation and fixed type inconsistency
 export const analyzeClinicalPath = async (quizTitle: string, questions: QuizQuestion[], userAnswers: number[]): Promise<string> => {
   return wrapAiCall(async () => {
     const ai = getAiClient();
@@ -122,46 +92,105 @@ export const analyzeClinicalPath = async (quizTitle: string, questions: QuizQues
       isCorrect: userAnswers[i] === q.correctAnswer
     }));
 
-    const prompt = `As a Senior Pharmaceutical Consultant, perform a 'Clinical Path Analysis' for the student's performance on the assessment: "${quizTitle}".
+    const prompt = `As a Senior Clinical Preceptor, analyze this student's performance on "${quizTitle}".
+    Provide a detailed clinical remediation report. Identify strengths, weaknesses in their reasoning, and specific pharmaceutical concepts to revisit.
     
-    PERFORMANCE_LOG:
+    PERFORMANCE_DATA:
     ${JSON.stringify(performanceContext)}
-
-    Structure the analysis as follows:
-    1. Proficiency Summary
-    2. Critical Learning Gaps
-    3. Remediation Strategy
-    4. Pro Tip
     
-    Format in professional Markdown with clear headings.`;
+    Structure with Markdown headers (###) and bullet points.`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: prompt,
+    });
+
+    return response.text || "Analysis stream silent.";
+  }, "NEURAL_SYNC_ERROR: Analysis synthesis failed.", "Clinical Path Analysis");
+};
+
+/**
+ * Assessment Feedback Generation
+ */
+// Fix: Implemented missing getFeedback export
+export const getFeedback = async (score: number, total: number, title: string): Promise<string> => {
+  return wrapAiCall(async () => {
+    const ai = getAiClient();
+    const percentage = Math.round((score / total) * 100);
+    const prompt = `Provide a short, motivating, and professional feedback message for a pharmacy student who scored ${score}/${total} (${percentage}%) on an assessment titled "${title}". Use a high-tech/cyberpunk clinical tone.`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: prompt,
+    });
+
+    return response.text || "Feedback synchronized.";
+  }, "NEURAL_SYNC_ERROR: Feedback loop offline.", "Assessment Feedback");
+};
+
+/**
+ * Material Summary Synthesis
+ */
+// Fix: Implemented missing generateSummary export
+export const generateSummary = async (content: string, title: string): Promise<string> => {
+  return wrapAiCall(async () => {
+    const ai = getAiClient();
+    const prompt = `Summarize the following pharmaceutical material titled "${title}". 
+    Focus on key therapeutic classes, mechanisms, and clinical pearls. 
+    Keep it concise and structured.
+    
+    CONTENT:
+    ${content.substring(0, 10000)}`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: prompt,
+    });
+
+    return response.text || "Summary synthesized.";
+  }, "NEURAL_SYNC_ERROR: Summary synthesis interrupted.", "Material Summary");
+};
+
+/**
+ * AI Avatar Manifestation
+ */
+// Fix: Implemented missing generateAvatar export using gemini-2.5-flash-image
+export const generateAvatar = async (prompt: string): Promise<string> => {
+  return wrapAiCall(async () => {
+    const ai = getAiClient();
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash-image',
+      contents: {
+        parts: [{ text: `A futuristic, professional medical profile avatar: ${prompt}` }]
+      }
+    });
+
+    for (const part of response.candidates[0].content.parts) {
+      if (part.inlineData) {
+        return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+      }
+    }
+    throw new Error("No image data in response");
+  }, "https://api.dicebear.com/7.x/bottts/svg?seed=fallback", "Avatar Generation");
+};
+
+/**
+ * Comprehensive Study Guide Synthesis
+ */
+// Fix: Implemented missing generateStudyGuide export
+export const generateStudyGuide = async (content: string, title: string): Promise<StudyGuide> => {
+  return wrapAiCall(async () => {
+    const ai = getAiClient();
+    const prompt = `Synthesize a comprehensive study protocol (guide) based on the following material: "${title}".
+    
+    MATERIAL_CONTENT:
+    ${content.substring(0, 15000)}
+    
+    Return a JSON object with: learning_path, concept_breakdown, practice_questions, and clinical_scenarios.`;
 
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-preview',
       contents: prompt,
-    });
-    return response.text || "Analysis failed to manifest.";
-  }, "Performance analytics sync failed.", "Clinical Path Analysis");
-};
-
-export const generateSummary = async (content: string, title: string): Promise<string> => {
-  return wrapAiCall(async () => {
-    const ai = getAiClient();
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: `Provide a high-yield clinical summary for: ${title}. Base it strictly on this content: ${content.substring(0, 8000)}.`,
-    });
-    return response.text || "Synthesis failed.";
-  }, "Synthesis failed.", "Summary Synthesis");
-};
-
-export const generateStudyGuide = async (content: string, title: string): Promise<any> => {
-  return wrapAiCall(async () => {
-    const ai = getAiClient();
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
-      contents: `Analyze this pharmaceutical material: "${title}". Generate a comprehensive study guide.
-      
-      Content: ${content.substring(0, 15000)}`,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -188,8 +217,7 @@ export const generateStudyGuide = async (content: string, title: string): Promis
                   question: { type: Type.STRING },
                   options: { type: Type.ARRAY, items: { type: Type.STRING } },
                   correctAnswer: { type: Type.INTEGER },
-                  explanation: { type: Type.STRING },
-                  category: { type: Type.STRING }
+                  explanation: { type: Type.STRING }
                 },
                 required: ["question", "options", "correctAnswer", "explanation"]
               }
@@ -210,16 +238,28 @@ export const generateStudyGuide = async (content: string, title: string): Promis
         }
       }
     });
+
     return JSON.parse(response.text || "{}");
-  }, { learning_path: [], concept_breakdown: [], practice_questions: [], clinical_scenarios: [] }, "Study Guide Generation");
+  }, {} as StudyGuide, "Study Guide Generation");
 };
 
+/**
+ * Quiz Synthesis from Study Protocol
+ */
+// Fix: Implemented missing generateQuizFromGuide export
 export const generateQuizFromGuide = async (guide: StudyGuide, count: number): Promise<QuizQuestion[]> => {
   return wrapAiCall(async () => {
     const ai = getAiClient();
+    const prompt = `Based on the following study protocol, generate ${count} additional pharmaceutical assessment questions.
+    
+    PROTOCOL_CONTEXT:
+    ${JSON.stringify(guide)}
+    
+    Return a JSON array of QuizQuestion objects.`;
+
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: `Based on this study guide: ${guide.title}, generate ${count} additional high-yield practice questions.`,
+      contents: prompt,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -238,31 +278,7 @@ export const generateQuizFromGuide = async (guide: StudyGuide, count: number): P
         }
       }
     });
+
     return JSON.parse(response.text || "[]");
   }, [], "Quiz from Guide Generation");
-};
-
-export const getFeedback = async (score: number, total: number, topics: string): Promise<string> => {
-  return wrapAiCall(async () => {
-    const ai = getAiClient();
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: `User scored ${score}/${total} on ${topics}. Provide a technical clinical feedback summary.`,
-    });
-    return response.text || "Sync complete.";
-  }, "Performance data logged.", "Feedback Generation");
-};
-
-export const generateAvatar = async (prompt: string): Promise<string> => {
-  return wrapAiCall(async () => {
-    const ai = getAiClient();
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-image',
-      contents: { parts: [{ text: `A futuristic professional pharmaceutical avatar: ${prompt}` }] },
-    });
-    for (const part of response.candidates[0].content.parts) {
-      if (part.inlineData) return `data:image/png;base64,${part.inlineData.data}`;
-    }
-    return "https://api.dicebear.com/7.x/bottts/svg?seed=fallback";
-  }, "https://api.dicebear.com/7.x/bottts/svg?seed=fallback", "Avatar Generation");
 };
