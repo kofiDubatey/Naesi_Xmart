@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback, Suspense, lazy, useRef } from 'react';
-import { supabase } from './supabaseClient';
+import { supabase, IS_CONFIGURED } from './supabaseClient';
 import { Course, Material, Quiz, Message, StudyGroup, AppNotification, UserProfile, NotificationSettings, QuizSettings, StudyGuide, TemporalEvent } from './types';
 import Auth from './components/Auth';
 import Sidebar from './components/Sidebar';
@@ -88,10 +88,16 @@ const App: React.FC = () => {
   }, [profile, addSuccess]);
 
   useEffect(() => {
+    if (!IS_CONFIGURED) {
+      setDbError("CONFIGURATION_MISSING: The application cannot find SUPABASE_URL or SUPABASE_ANON_KEY. Please verify Netlify environment variables and redeploy.");
+      setLoading(false);
+      return;
+    }
+
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (error) {
         if (error.message.includes('fetch')) {
-          setDbError("DATABASE_UNREACHABLE: Check if your Supabase project is active/unpaused.");
+          setDbError("DATABASE_UNREACHABLE: Network request failed. This usually means the SUPABASE_URL is invalid or the database is paused.");
         } else {
           addError("Auth Sync", error.message);
         }
@@ -99,7 +105,7 @@ const App: React.FC = () => {
       setSession(session);
       setLoading(false);
     }).catch(err => {
-      setDbError("NETWORK_FAILURE: Connection to Supabase failed. Check project status.");
+      setDbError("NETWORK_FAILURE: Connection to Supabase failed. Ensure your environment variables are correctly formatted.");
       setLoading(false);
     });
 
@@ -230,11 +236,11 @@ const App: React.FC = () => {
        </div>
        <h1 className="text-3xl font-bold font-space text-white uppercase tracking-tighter mb-4">Neural Gateway Offline</h1>
        <div className="max-w-2xl p-6 glass border border-pink-500/20 bg-pink-500/5 rounded-2xl mb-8">
-          <p className="text-pink-400 font-bold uppercase tracking-widest text-xs break-words">{dbError}</p>
+          <p className="text-pink-400 font-bold uppercase tracking-widest text-xs break-words whitespace-pre-wrap">{dbError}</p>
        </div>
-       <div className="flex gap-4">
+       <div className="flex flex-col md:flex-row gap-4">
           <button onClick={() => window.location.reload()} className="px-8 py-4 bg-white/5 hover:bg-white/10 text-white rounded-2xl font-bold text-[10px] uppercase tracking-widest border border-white/10 transition-all">Retry Synchronization</button>
-          <a href="https://supabase.com/dashboard" target="_blank" rel="noreferrer" className="px-8 py-4 bg-cyan-600 hover:bg-cyan-500 text-slate-900 rounded-2xl font-bold text-[10px] uppercase tracking-widest shadow-xl shadow-cyan-600/20 transition-all">Check Supabase Status</a>
+          <a href="https://supabase.com/dashboard" target="_blank" rel="noreferrer" className="px-8 py-4 bg-cyan-600 hover:bg-cyan-500 text-slate-900 rounded-2xl font-bold text-[10px] uppercase tracking-widest shadow-xl shadow-cyan-600/20 transition-all text-center">Check Supabase Console</a>
        </div>
     </div>
   );

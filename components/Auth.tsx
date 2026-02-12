@@ -46,7 +46,7 @@ const Auth: React.FC = () => {
         if (signUpError) {
           if (signUpError.message.toLowerCase().includes('rate limit')) {
             setCountdown(60);
-            throw new Error("RATE_LIMIT: Neural gateway overflow. Wait 60s or try 'Login' if you already registered.");
+            throw new Error("RATE_LIMIT: Neural gateway overflow. Wait 60s.");
           }
           throw signUpError;
         }
@@ -56,31 +56,32 @@ const Auth: React.FC = () => {
         const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
         if (signInError) {
           if (signInError.message.toLowerCase().includes('invalid login credentials')) {
-            throw new Error("ACCESS_DENIED: Neural key or cipher mismatch. Please verify or create a new linkage.");
+            throw new Error("ACCESS_DENIED: Neural key mismatch. Verify credentials or create linkage.");
           }
           throw signInError;
         }
       }
     } catch (err: any) {
-      setError(err.message.toUpperCase());
+      let friendlyMsg = err.message;
+      if (friendlyMsg.includes('fetch')) {
+        friendlyMsg = "NETWORK_ERROR: Failed to connect to Supabase. Check your Netlify Environment Variables (SUPABASE_URL and SUPABASE_ANON_KEY).";
+      }
+      setError(friendlyMsg.toUpperCase());
     } finally {
       setLoading(false);
     }
   };
 
   const handleSystemInit = async () => {
-    // Secret provisioning logic for Super Admin
     if (initCode === "NX-ALPHA-77" && email === "kofidugbatey59@gmail.com") {
       setLoading(true);
       try {
-        // In a real scenario, this would be an edge function to handle user metadata
-        // For this build, we update the profile record and mock the role check in App.tsx
         const { error: pError } = await supabase
           .from('profiles')
           .update({ role: 'super-admin' })
-          .eq('email', email); // Assuming email is stored in profile
+          .eq('email', email);
           
-        setMessage("SYSTEM_INIT: Super Admin credentials provisioned for sector [kofidugbatey59]. Proceed to login.");
+        setMessage("SYSTEM_INIT: Super Admin credentials provisioned. Proceed to login.");
         setShowInit(false);
       } catch (err) {
         setError("PROVISIONING_FAILED: Secret sequence rejected.");
@@ -154,10 +155,9 @@ const Auth: React.FC = () => {
                   type="text" 
                   value={name}
                   onChange={e => setName(e.target.value)}
-                  className="w-full bg-slate-900 border border-white/10 rounded-2xl px-5 py-4 text-white focus:border-cyan-500 outline-none transition-all placeholder:text-slate-700 focus-visible:ring-1 focus-visible:ring-cyan-400"
+                  className="w-full bg-slate-900 border border-white/10 rounded-2xl px-5 py-4 text-white focus:border-cyan-500 outline-none transition-all placeholder:text-slate-700"
                   placeholder="Designation"
                   required
-                  aria-required="true"
                 />
               </div>
             )}
@@ -169,10 +169,9 @@ const Auth: React.FC = () => {
                 type="email" 
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                className="w-full bg-slate-900 border border-white/10 rounded-2xl px-5 py-4 text-white focus:border-cyan-500 outline-none transition-all placeholder:text-slate-700 focus-visible:ring-1 focus-visible:ring-cyan-400"
+                className="w-full bg-slate-900 border border-white/10 rounded-2xl px-5 py-4 text-white focus:border-cyan-500 outline-none transition-all placeholder:text-slate-700"
                 placeholder="user@synapse.link"
                 required
-                aria-required="true"
               />
             </div>
 
@@ -189,17 +188,16 @@ const Auth: React.FC = () => {
                   type="password" 
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  className="w-full bg-slate-900 border border-white/10 rounded-2xl px-5 py-4 text-white focus:border-cyan-500 outline-none transition-all placeholder:text-slate-700 focus-visible:ring-1 focus-visible:ring-cyan-400"
+                  className="w-full bg-slate-900 border border-white/10 rounded-2xl px-5 py-4 text-white focus:border-cyan-500 outline-none transition-all placeholder:text-slate-700"
                   placeholder="••••••••"
                   required
-                  aria-required="true"
                 />
               </div>
             )}
 
             <div aria-live="assertive">
               {error && (
-                <div className={`p-4 bg-pink-500/10 border border-pink-500/20 rounded-2xl text-[10px] text-pink-400 font-bold uppercase tracking-widest text-center leading-relaxed ${countdown > 0 ? 'animate-pulse' : ''}`} role="alert">
+                <div className="p-4 bg-pink-500/10 border border-pink-500/20 rounded-2xl text-[10px] text-pink-400 font-bold uppercase tracking-widest text-center leading-relaxed" role="alert">
                   {error} {countdown > 0 && `(RETRY_IN_${countdown}S)`}
                 </div>
               )}
@@ -214,9 +212,9 @@ const Auth: React.FC = () => {
             <button 
               type="submit"
               disabled={loading || countdown > 0}
-              className="w-full py-5 bg-gradient-to-r from-cyan-600 to-indigo-700 rounded-2xl font-bold uppercase tracking-[0.3em] text-[10px] text-white shadow-xl shadow-cyan-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:grayscale focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+              className="w-full py-5 bg-gradient-to-r from-cyan-600 to-indigo-700 rounded-2xl font-bold uppercase tracking-[0.3em] text-[10px] text-white shadow-xl shadow-cyan-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
             >
-              {loading ? 'SYNCING...' : countdown > 0 ? `WAIT_${countdown}S` : isForgotPassword ? 'SEND_RECOVERY' : isSignUp ? 'MANIFEST_IDENTITY' : 'INITIATE_SESSION'}
+              {loading ? 'SYNCING...' : isForgotPassword ? 'SEND_RECOVERY' : isSignUp ? 'MANIFEST_IDENTITY' : 'INITIATE_SESSION'}
             </button>
           </form>
         )}
@@ -234,10 +232,6 @@ const Auth: React.FC = () => {
           >
             {isSignUp ? 'Already identified? Login' : 'New Entity? Create Linkage'}
           </button>
-          
-          {isForgotPassword && (
-            <button onClick={() => setIsForgotPassword(false)} className="text-[10px] text-slate-400 hover:text-cyan-400 font-bold uppercase tracking-widest transition-colors focus-visible:outline-none focus-visible:underline">Return to Neural Access</button>
-          )}
         </div>
         
         <div className="mt-8 pt-6 border-t border-white/5 text-center">
