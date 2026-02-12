@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { Material, Course } from '../types';
 import { GoogleGenAI } from "@google/genai";
@@ -37,7 +36,10 @@ const CurriculumView: React.FC<CurriculumViewProps> = ({ materials, courses, set
     if (materials.length === 0) return;
     setIsSummarizing(true);
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      // Injected automatically by platform
+      const apiKey = process.env.API_KEY;
+      const ai = new GoogleGenAI({ apiKey });
+      
       const aggregateContent = materials.slice(0, 10).map(m => `--- ${m.title} ---\n${m.content.substring(0, 500)}`).join('\n\n');
       
       const response = await ai.models.generateContent({
@@ -49,9 +51,9 @@ const CurriculumView: React.FC<CurriculumViewProps> = ({ materials, courses, set
         ${aggregateContent}`,
       });
       setGlobalSummary(response.text || "Insight manifested but stream is silent.");
-    } catch (err) {
+    } catch (err: any) {
       console.error("Global summary failure:", err);
-      setGlobalSummary("Unable to synchronize global insights at this time.");
+      setGlobalSummary(`Unable to synchronize global insights: ${err.message || 'Connection Interrupted'}`);
     } finally {
       setIsSummarizing(false);
     }
@@ -84,12 +86,19 @@ const CurriculumView: React.FC<CurriculumViewProps> = ({ materials, courses, set
   return (
     <div className="space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-700 pb-24">
       <section className="glass p-10 rounded-[50px] border border-cyan-500/20 relative overflow-hidden bg-gradient-to-br from-cyan-500/10 via-transparent to-transparent">
-        <header className="mb-10">
-           <p className="text-cyan-400 text-[10px] font-bold uppercase tracking-[0.4em] mb-2 flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
-              NEURAL_CURRICULUM_SYNTHESIS
-           </p>
-           <h2 className="text-4xl font-bold font-space text-white uppercase tracking-tighter">AI Curriculum Overview</h2>
+        <header className="mb-10 flex justify-between items-start">
+           <div>
+             <p className="text-cyan-400 text-[10px] font-bold uppercase tracking-[0.4em] mb-2 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
+                NEURAL_CURRICULUM_SYNTHESIS
+             </p>
+             <h2 className="text-4xl font-bold font-space text-white uppercase tracking-tighter">AI Curriculum Overview</h2>
+           </div>
+           {globalSummary && !isSummarizing && (
+             <button onClick={fetchGlobalSummary} className="p-2 glass rounded-xl text-slate-400 hover:text-cyan-400 transition-all border border-white/5" title="Re-sync Analysis">
+               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+             </button>
+           )}
         </header>
 
         <div className="max-w-4xl relative">

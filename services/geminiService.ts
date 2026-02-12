@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { QuizQuestion, Flashcard, StudyGuide } from "../types";
 
@@ -10,6 +9,10 @@ const wrapAiCall = async <T>(fn: () => Promise<T>, fallback: T, name: string): P
     return await fn();
   } catch (error: any) {
     console.error(`[AI Service] ${name} Failure:`, error);
+    // Return a descriptive error as the "fallback" if it's a string, so the UI can show it.
+    if (typeof fallback === 'string') {
+      return `NEURAL_SYNC_ERROR: ${error.message || 'Unknown connection failure'}` as unknown as T;
+    }
     return fallback;
   }
 };

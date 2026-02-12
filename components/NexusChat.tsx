@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { Course, Material, ChatMessage, SavedDiscussion } from '../types';
@@ -61,7 +60,9 @@ const NexusChat: React.FC<NexusChatProps> = ({ courses, materials, userId, onAwa
     setIsTyping(true);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const apiKey = process.env.API_KEY;
+      const ai = new GoogleGenAI({ apiKey });
+      
       const selectedMaterials = courseMaterials.filter(m => activeMaterialIds.has(m.id));
       const context = selectedMaterials.length > 0 
         ? `Knowledge nodes: ${selectedMaterials.map(m => m.title).join(', ')}`
@@ -77,8 +78,12 @@ const NexusChat: React.FC<NexusChatProps> = ({ courses, materials, userId, onAwa
       const updatedHistory = [...newHistory, modelMessage];
       setHistory(updatedHistory);
       onAwardPoints(5, "Knowledge Exchange Performed");
-    } catch (err) {
-      setHistory([...newHistory, { role: 'model', parts: [{ text: "NEURAL_LINK_FAILURE: Connection to GenAI gateway interrupted. Please ensure the project is correctly linked." }] }]);
+    } catch (err: any) {
+      console.error("AI Communication Failure:", err);
+      setHistory([...newHistory, { 
+        role: 'model', 
+        parts: [{ text: `NEURAL_LINK_FAILURE: ${err.message || 'Connection to GenAI gateway interrupted'}. Please ensure the environment is synchronized and try again.` }] 
+      }]);
     } finally {
       setIsTyping(false);
     }
