@@ -33,26 +33,17 @@ const CurriculumView: React.FC<CurriculumViewProps> = ({ materials, courses, set
     });
   }, [materials, filterType, searchQuery]);
 
-  // Robust API Key retrieval
-  const getApiKey = () => {
-    try {
-      if (typeof window !== 'undefined' && (window as any).process?.env?.API_KEY) return (window as any).process.env.API_KEY;
-      if (typeof process !== 'undefined' && process.env?.API_KEY) return process.env.API_KEY;
-    } catch (e) {}
-    return '';
-  };
-
   const fetchGlobalSummary = async () => {
     if (materials.length === 0) return;
     setIsSummarizing(true);
     try {
-      const apiKey = getApiKey();
-      if (!apiKey) {
+      if (!process.env.API_KEY) {
         setGlobalSummary("NEURAL_SYNC_UNAVAILABLE: API_KEY missing from environment.");
         return;
       }
 
-      const ai = new GoogleGenAI({ apiKey });
+      // ALWAYS use new GoogleGenAI({apiKey: process.env.API_KEY});
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const aggregateContent = materials.slice(0, 10).map(m => `--- ${m.title} ---\n${m.content.substring(0, 500)}`).join('\n\n');
       
       const response = await ai.models.generateContent({
@@ -63,6 +54,7 @@ const CurriculumView: React.FC<CurriculumViewProps> = ({ materials, courses, set
         CURRICULUM_DATA:
         ${aggregateContent}`,
       });
+      // Use .text property directly
       setGlobalSummary(response.text || "Insight manifested but stream is silent.");
     } catch (err) {
       console.error("Global summary failure:", err);

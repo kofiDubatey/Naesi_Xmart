@@ -45,14 +45,6 @@ const NexusChat: React.FC<NexusChatProps> = ({ courses, materials, userId, onAwa
     if (data) setSavedDiscussions(data);
   };
 
-  const getApiKey = (): string => {
-    try {
-      if (typeof process !== 'undefined' && process.env?.API_KEY) return process.env.API_KEY;
-      if ((window as any).process?.env?.API_KEY) return (window as any).process.env.API_KEY;
-    } catch (e) {}
-    return '';
-  };
-
   const startNewDiscussion = (courseId: string) => {
     setSelectedCourseId(courseId);
     setHistory([]);
@@ -62,8 +54,7 @@ const NexusChat: React.FC<NexusChatProps> = ({ courses, materials, userId, onAwa
     e.preventDefault();
     if (!input.trim() || !selectedCourseId || isTyping) return;
 
-    const apiKey = getApiKey();
-    if (!apiKey) {
+    if (!process.env.API_KEY) {
       setHistory([...history, { role: 'model', parts: [{ text: "NEURAL_LINK_FAILURE: API_KEY is missing from environment." }] }]);
       return;
     }
@@ -75,7 +66,8 @@ const NexusChat: React.FC<NexusChatProps> = ({ courses, materials, userId, onAwa
     setIsTyping(true);
 
     try {
-      const ai = new GoogleGenAI({ apiKey });
+      // ALWAYS use new GoogleGenAI({apiKey: process.env.API_KEY});
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const selectedMaterials = courseMaterials.filter(m => activeMaterialIds.has(m.id));
       const context = selectedMaterials.length > 0 
         ? `Knowledge nodes: ${selectedMaterials.map(m => m.title).join(', ')}`
@@ -87,6 +79,7 @@ const NexusChat: React.FC<NexusChatProps> = ({ courses, materials, userId, onAwa
       });
 
       const response = await chat.sendMessage({ message: input });
+      // Use .text property directly
       const modelMessage: ChatMessage = { role: 'model', parts: [{ text: response.text }] };
       const updatedHistory = [...newHistory, modelMessage];
       setHistory(updatedHistory);

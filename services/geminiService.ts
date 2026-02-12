@@ -3,29 +3,11 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { QuizQuestion, Flashcard, StudyGuide } from "../types";
 
 /**
- * Safely retrieves the API_KEY from the environment.
+ * Utility to wrap AI calls for consistent error handling and logging.
  */
-const getApiKey = (): string => {
-  try {
-    if (typeof process !== 'undefined' && process.env) {
-      return process.env.API_KEY || '';
-    }
-  } catch (e) {}
-  return '';
-};
-
-const getAiClient = () => {
-  const apiKey = getApiKey();
-  if (!apiKey) {
-    console.error("AI_INITIALIZATION_ERROR: API_KEY is missing from environment variables.");
-  }
-  return new GoogleGenAI({ apiKey });
-};
-
 const wrapAiCall = async <T>(fn: () => Promise<T>, fallback: T, name: string): Promise<T> => {
   try {
-    const apiKey = getApiKey();
-    if (!apiKey) throw new Error("API_KEY_MISSING");
+    if (!process.env.API_KEY) throw new Error("API_KEY_MISSING");
     return await fn();
   } catch (error: any) {
     console.error(`[AI Service] ${name} Failure:`, error);
@@ -43,7 +25,8 @@ export const generateProfessionalPharmacyQuiz = async (
   difficulty: string = 'standard'
 ): Promise<QuizQuestion[]> => {
   return wrapAiCall(async () => {
-    const ai = getAiClient();
+    // ALWAYS use new GoogleGenAI({apiKey: process.env.API_KEY});
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const context = materials.filter(m => m && m.trim().length > 0).join("\n\n---\n\n");
     
     if (!context || context.length < 50) {
@@ -82,6 +65,7 @@ export const generateProfessionalPharmacyQuiz = async (
       }
     });
 
+    // Use .text property directly
     return JSON.parse(response.text || "[]");
   }, [], "Professional Pharmacy Quiz Generation");
 };
@@ -92,7 +76,7 @@ export const generateProfessionalPharmacyQuiz = async (
  */
 export const analyzeClinicalPath = async (quizTitle: string, questions: QuizQuestion[], userAnswers: number[]): Promise<string> => {
   return wrapAiCall(async () => {
-    const ai = getAiClient();
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const performanceContext = questions.map((q, i) => ({
       question: q.question,
       userAnswer: q.options[userAnswers[i]] || "No Answer",
@@ -118,24 +102,26 @@ export const analyzeClinicalPath = async (quizTitle: string, questions: QuizQues
       model: 'gemini-3-pro-preview',
       contents: prompt,
     });
+    // Use .text property directly
     return response.text || "Analysis failed to manifest.";
   }, "Performance analytics sync failed.", "Clinical Path Analysis");
 };
 
 export const generateSummary = async (content: string, title: string): Promise<string> => {
   return wrapAiCall(async () => {
-    const ai = getAiClient();
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: `Provide a high-yield clinical summary for: ${title}. Base it strictly on this content: ${content.substring(0, 8000)}.`,
     });
+    // Use .text property directly
     return response.text || "Synthesis failed.";
   }, "Synthesis failed.", "Summary Synthesis");
 };
 
 export const generateStudyGuide = async (content: string, title: string): Promise<any> => {
   return wrapAiCall(async () => {
-    const ai = getAiClient();
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-preview',
       contents: `Analyze this pharmaceutical material: "${title}". Generate a comprehensive study guide.
@@ -189,13 +175,14 @@ export const generateStudyGuide = async (content: string, title: string): Promis
         }
       }
     });
+    // Use .text property directly
     return JSON.parse(response.text || "{}");
   }, { learning_path: [], concept_breakdown: [], practice_questions: [], clinical_scenarios: [] }, "Study Guide Generation");
 };
 
 export const generateQuizFromGuide = async (guide: StudyGuide, count: number): Promise<QuizQuestion[]> => {
   return wrapAiCall(async () => {
-    const ai = getAiClient();
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: `Based on this study guide: ${guide.title}, generate ${count} additional high-yield practice questions.`,
@@ -217,24 +204,26 @@ export const generateQuizFromGuide = async (guide: StudyGuide, count: number): P
         }
       }
     });
+    // Use .text property directly
     return JSON.parse(response.text || "[]");
   }, [], "Quiz from Guide Generation");
 };
 
 export const getFeedback = async (score: number, total: number, topics: string): Promise<string> => {
   return wrapAiCall(async () => {
-    const ai = getAiClient();
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: `User scored ${score}/${total} on ${topics}. Provide a technical clinical feedback summary.`,
     });
+    // Use .text property directly
     return response.text || "Sync complete.";
   }, "Performance data logged.", "Feedback Generation");
 };
 
 export const generateAvatar = async (prompt: string): Promise<string> => {
   return wrapAiCall(async () => {
-    const ai = getAiClient();
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
       contents: { parts: [{ text: `A futuristic professional pharmaceutical avatar: ${prompt}` }] },
