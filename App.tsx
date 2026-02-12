@@ -1,7 +1,7 @@
 
-import React, { useState, useEffect, useCallback, Suspense, lazy, useRef } from 'react';
-import { supabase, IS_CONFIGURED } from './supabaseClient';
-import { Course, Material, Quiz, Message, StudyGroup, AppNotification, UserProfile, NotificationSettings, QuizSettings, StudyGuide, TemporalEvent } from './types';
+import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
+import { supabase, IS_CONFIGURED, configureSupabaseManual } from './supabaseClient';
+import { Course, Material, Quiz, StudyGroup, AppNotification, UserProfile, NotificationSettings, QuizSettings, StudyGuide, TemporalEvent } from './types';
 import Auth from './components/Auth';
 import Sidebar from './components/Sidebar';
 import ProfileModal from './components/ProfileModal';
@@ -22,7 +22,7 @@ const SUPER_ADMIN_EMAIL = 'kofidugbatey59@gmail.com';
 const ADMIN_NAME = 'Kofi Dugbatey';
 
 const ViewLoader = () => (
-  <div className="flex-1 flex flex-col items-center justify-center min-h-[60vh] animate-pulse" role="status" aria-label="Loading view">
+  <div className="flex-1 flex flex-col items-center justify-center min-h-[60vh] animate-pulse" role="status">
     <div className="w-16 h-16 border-b-2 border-cyan-500 rounded-full animate-spin mb-4"></div>
     <p className="text-[10px] text-cyan-500 font-bold uppercase tracking-[0.4em]">Synchronizing_View_Data...</p>
   </div>
@@ -34,6 +34,10 @@ const App: React.FC = () => {
   const [dbError, setDbError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'materials' | 'nexus' | 'guides' | 'quizzes' | 'groups' | 'bookmarks' | 'settings' | 'curriculum' | 'admin'>('dashboard');
   
+  // Manual Config State
+  const [manualUrl, setManualUrl] = useState('');
+  const [manualKey, setManualKey] = useState('');
+
   const [courses, setCourses] = useState<Course[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
@@ -76,36 +80,25 @@ const App: React.FC = () => {
   const awardPoints = useCallback(async (amount: number, reason: string) => {
     if (!profile || amount === 0) return;
     const newPoints = (profile.points || 0) + amount;
-    
     setProfile(prev => prev ? { ...prev, points: newPoints } : null);
     addSuccess("COGNITIVE_GAIN", `+${amount} XP: ${reason}`);
-
     try {
       await supabase.from('profiles').update({ points: newPoints }).eq('id', profile.id);
-    } catch (err) {
-      console.error("[App] Points sync failure:", err);
-    }
+    } catch (err) {}
   }, [profile, addSuccess]);
 
   useEffect(() => {
     if (!IS_CONFIGURED) {
-      setDbError("CONFIGURATION_MISSING: The application cannot find SUPABASE_URL or SUPABASE_ANON_KEY. Please verify Netlify environment variables and redeploy.");
       setLoading(false);
       return;
     }
 
     supabase.auth.getSession().then(({ data: { session }, error }) => {
-      if (error) {
-        if (error.message.includes('fetch')) {
-          setDbError("DATABASE_UNREACHABLE: Network request failed. This usually means the SUPABASE_URL is invalid or the database is paused.");
-        } else {
-          addError("Auth Sync", error.message);
-        }
-      }
+      if (error) setDbError(error.message);
       setSession(session);
       setLoading(false);
     }).catch(err => {
-      setDbError("NETWORK_FAILURE: Connection to Supabase failed. Ensure your environment variables are correctly formatted.");
+      setDbError("NETWORK_FAILURE: Remote gateway unreachable.");
       setLoading(false);
     });
 
@@ -158,13 +151,6 @@ const App: React.FC = () => {
         isAdminView ? supabase.from('events').select('*') : supabase.from('events').select('*').eq('user_id', fetchId)
       ]);
 
-      if (coursesRes.error || materialsRes.error || quizzesRes.error) {
-        const err = coursesRes.error || materialsRes.error || quizzesRes.error;
-        if (err?.message.includes('academic_year') || err?.message.includes('column') || err?.message.includes('relation')) {
-          setDbError(`SCHEMA_MISMATCH: ${err.message}. Please run the MASTER SQL script in Supabase.`);
-        }
-      }
-
       setCourses(coursesRes.data || []);
       setMaterials(materialsRes.data || []);
       setQuizzes(quizzesRes.data || []);
@@ -177,49 +163,31 @@ const App: React.FC = () => {
         setAllUsers(usersRes || []);
       }
     } catch (err: any) {
-      if (err.message.includes('fetch')) {
-        setDbError("DATABASE_UNREACHABLE: Network connection refused by gateway.");
-      } else {
-        addError("SYNC_ERROR", err.message);
-      }
+      if (err.message.includes('fetch')) setDbError("DATABASE_UNREACHABLE");
+      else addError("SYNC_ERROR", err.message);
     }
   };
 
   const handleAddCourse = async (course: any) => {
     try {
-      const { data, error } = await supabase.from('courses').insert({ 
-        ...course, 
-        user_id: effectiveUserId, 
-        progress: 0, 
-        image: `https://picsum.photos/seed/${course.name}/600/400` 
-      }).select().single();
-      
+      const { data, error } = await supabase.from('courses').insert({ ...course, user_id: effectiveUserId, progress: 0, image: `https://picsum.photos/seed/${course.name}/600/400` }).select().single();
       if (error) throw error;
       if (data) {
         setCourses(prev => [...prev, data]);
         addSuccess("CURRICULUM_EXPANDED", `Module ${course.code} initialized.`);
       }
-    } catch (err: any) {
-      addError("INITIALIZATION_FAILED", err.message || "Verify SQL setup and column names.");
-    }
+    } catch (err: any) { addError("INITIALIZATION_FAILED", err.message); }
   };
 
   const handleAddMaterial = async (material: any) => {
     try {
-      const { data, error } = await supabase.from('materials').insert({ 
-        ...material, 
-        user_id: effectiveUserId, 
-        date: new Date().toLocaleDateString(), 
-        bookmarked: false 
-      }).select().single();
+      const { data, error } = await supabase.from('materials').insert({ ...material, user_id: effectiveUserId, date: new Date().toLocaleDateString(), bookmarked: false }).select().single();
       if (error) throw error;
       if (data) {
         setMaterials(prev => [...prev, data]);
         addSuccess("PACKET_SECURED", "Node indexed in vault.");
       }
-    } catch (err: any) {
-      addError("UPLOAD_FAILED", err.message);
-    }
+    } catch (err: any) { addError("UPLOAD_FAILED", err.message); }
   };
 
   if (loading) return (
@@ -229,18 +197,47 @@ const App: React.FC = () => {
     </div>
   );
 
-  if (dbError) return (
-    <div className="h-screen bg-slate-950 flex flex-col items-center justify-center p-10 text-center">
-       <div className="w-20 h-20 bg-pink-500/10 rounded-3xl border border-pink-500/30 flex items-center justify-center mb-8">
-          <svg className="w-10 h-10 text-pink-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+  if (!IS_CONFIGURED || dbError === "DATABASE_UNREACHABLE") return (
+    <div className="h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center">
+       <div className="w-24 h-24 bg-pink-500/10 rounded-full border border-pink-500/20 flex items-center justify-center mb-10 shadow-[0_0_50px_rgba(236,72,153,0.1)]">
+          <svg className="w-12 h-12 text-pink-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
        </div>
-       <h1 className="text-3xl font-bold font-space text-white uppercase tracking-tighter mb-4">Neural Gateway Offline</h1>
-       <div className="max-w-2xl p-6 glass border border-pink-500/20 bg-pink-500/5 rounded-2xl mb-8">
-          <p className="text-pink-400 font-bold uppercase tracking-widest text-xs break-words whitespace-pre-wrap">{dbError}</p>
-       </div>
-       <div className="flex flex-col md:flex-row gap-4">
-          <button onClick={() => window.location.reload()} className="px-8 py-4 bg-white/5 hover:bg-white/10 text-white rounded-2xl font-bold text-[10px] uppercase tracking-widest border border-white/10 transition-all">Retry Synchronization</button>
-          <a href="https://supabase.com/dashboard" target="_blank" rel="noreferrer" className="px-8 py-4 bg-cyan-600 hover:bg-cyan-500 text-slate-900 rounded-2xl font-bold text-[10px] uppercase tracking-widest shadow-xl shadow-cyan-600/20 transition-all text-center">Check Supabase Console</a>
+       <h1 className="text-4xl font-bold font-space text-white uppercase tracking-tighter mb-4">Neural Link Required</h1>
+       <p className="text-slate-500 text-xs uppercase tracking-[0.3em] mb-12 max-w-md mx-auto leading-relaxed">
+         Automated environment injection failed. Please manually provide your Supabase credentials to establish a secure database connection.
+       </p>
+       
+       <div className="w-full max-w-md space-y-4">
+          <div className="glass p-8 rounded-[40px] border border-white/10 bg-slate-900/40 space-y-6">
+             <div>
+                <label className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-2 block text-left">Supabase Project URL</label>
+                <input 
+                  type="text" 
+                  value={manualUrl}
+                  onChange={e => setManualUrl(e.target.value)}
+                  placeholder="https://xyz.supabase.co"
+                  className="w-full bg-slate-950 border border-white/5 rounded-2xl px-6 py-4 text-white text-xs focus:border-cyan-500 outline-none transition-all"
+                />
+             </div>
+             <div>
+                <label className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-2 block text-left">Anon Key (Public)</label>
+                <input 
+                  type="password" 
+                  value={manualKey}
+                  onChange={e => setManualKey(e.target.value)}
+                  placeholder="Paste your anon public key..."
+                  className="w-full bg-slate-950 border border-white/5 rounded-2xl px-6 py-4 text-white text-xs focus:border-cyan-500 outline-none transition-all"
+                />
+             </div>
+             <button 
+               onClick={() => configureSupabaseManual(manualUrl, manualKey)}
+               disabled={!manualUrl.includes('supabase.co') || manualKey.length < 20}
+               className="w-full py-5 bg-cyan-600 hover:bg-cyan-500 text-slate-950 rounded-3xl font-bold text-[10px] uppercase tracking-[0.4em] shadow-2xl shadow-cyan-600/20 disabled:opacity-30 transition-all active:scale-95"
+             >
+               Finalize Manual Link
+             </button>
+          </div>
+          <button onClick={() => { localStorage.clear(); window.location.reload(); }} className="text-[9px] text-slate-600 uppercase font-bold tracking-widest hover:text-white transition-colors">Clear Local Overrides</button>
        </div>
     </div>
   );
@@ -251,14 +248,8 @@ const App: React.FC = () => {
     <div className="flex min-h-screen bg-slate-950 text-slate-200">
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} points={profile?.points || 0} isSuperAdmin={isSuperAdmin} />
       <main className="flex-1 overflow-y-auto p-4 md:p-10 relative custom-scrollbar">
-        {impersonatedUserId && (
-          <div className="fixed top-0 inset-x-0 bg-red-600 text-white p-2 text-center text-[10px] font-bold uppercase tracking-widest z-[300] flex justify-center items-center gap-4 shadow-2xl">
-             <span>Diagnostic Mode: Impersonating [{allUsers.find(u => u.id === impersonatedUserId)?.name}]</span>
-             <button onClick={() => setImpersonatedUserId(null)} className="px-4 py-1 bg-black/40 rounded-full font-black">ABORT</button>
-          </div>
-        )}
         <header className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-white/5 pb-10">
-          <div className={`${impersonatedUserId ? 'mt-8' : ''}`}>
+          <div>
             <p className="text-[10px] text-cyan-500 font-bold uppercase tracking-[0.4em] mb-2">SECTOR: {activeTab.toUpperCase()}</p>
             <h1 className="text-5xl font-bold font-space text-white tracking-tighter">Neural Hub</h1>
           </div>
