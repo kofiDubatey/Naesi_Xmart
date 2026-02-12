@@ -54,11 +54,6 @@ const NexusChat: React.FC<NexusChatProps> = ({ courses, materials, userId, onAwa
     e.preventDefault();
     if (!input.trim() || !selectedCourseId || isTyping) return;
 
-    if (!process.env.API_KEY) {
-      setHistory([...history, { role: 'model', parts: [{ text: "NEURAL_LINK_FAILURE: API_KEY is missing from environment." }] }]);
-      return;
-    }
-
     const userMessage: ChatMessage = { role: 'user', parts: [{ text: input }] };
     const newHistory = [...history, userMessage];
     setHistory(newHistory);
@@ -66,7 +61,6 @@ const NexusChat: React.FC<NexusChatProps> = ({ courses, materials, userId, onAwa
     setIsTyping(true);
 
     try {
-      // ALWAYS use new GoogleGenAI({apiKey: process.env.API_KEY});
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const selectedMaterials = courseMaterials.filter(m => activeMaterialIds.has(m.id));
       const context = selectedMaterials.length > 0 
@@ -79,13 +73,12 @@ const NexusChat: React.FC<NexusChatProps> = ({ courses, materials, userId, onAwa
       });
 
       const response = await chat.sendMessage({ message: input });
-      // Use .text property directly
       const modelMessage: ChatMessage = { role: 'model', parts: [{ text: response.text }] };
       const updatedHistory = [...newHistory, modelMessage];
       setHistory(updatedHistory);
       onAwardPoints(5, "Knowledge Exchange Performed");
     } catch (err) {
-      setHistory([...newHistory, { role: 'model', parts: [{ text: "NEURAL_LINK_FAILURE: Connection to GenAI gateway interrupted." }] }]);
+      setHistory([...newHistory, { role: 'model', parts: [{ text: "NEURAL_LINK_FAILURE: Connection to GenAI gateway interrupted. Please ensure the project is correctly linked." }] }]);
     } finally {
       setIsTyping(false);
     }

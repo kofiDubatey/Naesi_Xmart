@@ -7,7 +7,6 @@ import { QuizQuestion, Flashcard, StudyGuide } from "../types";
  */
 const wrapAiCall = async <T>(fn: () => Promise<T>, fallback: T, name: string): Promise<T> => {
   try {
-    if (!process.env.API_KEY) throw new Error("API_KEY_MISSING");
     return await fn();
   } catch (error: any) {
     console.error(`[AI Service] ${name} Failure:`, error);
@@ -25,7 +24,6 @@ export const generateProfessionalPharmacyQuiz = async (
   difficulty: string = 'standard'
 ): Promise<QuizQuestion[]> => {
   return wrapAiCall(async () => {
-    // ALWAYS use new GoogleGenAI({apiKey: process.env.API_KEY});
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const context = materials.filter(m => m && m.trim().length > 0).join("\n\n---\n\n");
     
@@ -65,14 +63,12 @@ export const generateProfessionalPharmacyQuiz = async (
       }
     });
 
-    // Use .text property directly
     return JSON.parse(response.text || "[]");
   }, [], "Professional Pharmacy Quiz Generation");
 };
 
 /**
  * Deep Clinical Path Analysis
- * Analyzes a completed quiz and provides detailed pedagogical feedback.
  */
 export const analyzeClinicalPath = async (quizTitle: string, questions: QuizQuestion[], userAnswers: number[]): Promise<string> => {
   return wrapAiCall(async () => {
@@ -91,10 +87,10 @@ export const analyzeClinicalPath = async (quizTitle: string, questions: QuizQues
     ${JSON.stringify(performanceContext)}
 
     Structure the analysis as follows:
-    1. Proficiency Summary: Overall cognitive standing in this specific topic.
-    2. Critical Learning Gaps: Specific clinical concepts the student misunderstood based on their incorrect answers.
-    3. Remediation Strategy: Steps to fix these gaps.
-    4. Pro Tip: A high-yield pharmaceutical pearl related to this topic.
+    1. Proficiency Summary
+    2. Critical Learning Gaps
+    3. Remediation Strategy
+    4. Pro Tip
     
     Format in professional Markdown with clear headings.`;
 
@@ -102,7 +98,6 @@ export const analyzeClinicalPath = async (quizTitle: string, questions: QuizQues
       model: 'gemini-3-pro-preview',
       contents: prompt,
     });
-    // Use .text property directly
     return response.text || "Analysis failed to manifest.";
   }, "Performance analytics sync failed.", "Clinical Path Analysis");
 };
@@ -114,7 +109,6 @@ export const generateSummary = async (content: string, title: string): Promise<s
       model: 'gemini-3-flash-preview',
       contents: `Provide a high-yield clinical summary for: ${title}. Base it strictly on this content: ${content.substring(0, 8000)}.`,
     });
-    // Use .text property directly
     return response.text || "Synthesis failed.";
   }, "Synthesis failed.", "Summary Synthesis");
 };
@@ -175,7 +169,6 @@ export const generateStudyGuide = async (content: string, title: string): Promis
         }
       }
     });
-    // Use .text property directly
     return JSON.parse(response.text || "{}");
   }, { learning_path: [], concept_breakdown: [], practice_questions: [], clinical_scenarios: [] }, "Study Guide Generation");
 };
@@ -204,7 +197,6 @@ export const generateQuizFromGuide = async (guide: StudyGuide, count: number): P
         }
       }
     });
-    // Use .text property directly
     return JSON.parse(response.text || "[]");
   }, [], "Quiz from Guide Generation");
 };
@@ -216,7 +208,6 @@ export const getFeedback = async (score: number, total: number, topics: string):
       model: 'gemini-3-flash-preview',
       contents: `User scored ${score}/${total} on ${topics}. Provide a technical clinical feedback summary.`,
     });
-    // Use .text property directly
     return response.text || "Sync complete.";
   }, "Performance data logged.", "Feedback Generation");
 };

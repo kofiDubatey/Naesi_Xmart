@@ -37,12 +37,6 @@ const CurriculumView: React.FC<CurriculumViewProps> = ({ materials, courses, set
     if (materials.length === 0) return;
     setIsSummarizing(true);
     try {
-      if (!process.env.API_KEY) {
-        setGlobalSummary("NEURAL_SYNC_UNAVAILABLE: API_KEY missing from environment.");
-        return;
-      }
-
-      // ALWAYS use new GoogleGenAI({apiKey: process.env.API_KEY});
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const aggregateContent = materials.slice(0, 10).map(m => `--- ${m.title} ---\n${m.content.substring(0, 500)}`).join('\n\n');
       
@@ -54,11 +48,10 @@ const CurriculumView: React.FC<CurriculumViewProps> = ({ materials, courses, set
         CURRICULUM_DATA:
         ${aggregateContent}`,
       });
-      // Use .text property directly
       setGlobalSummary(response.text || "Insight manifested but stream is silent.");
     } catch (err) {
       console.error("Global summary failure:", err);
-      setGlobalSummary("Unable to synchronize global insights.");
+      setGlobalSummary("Unable to synchronize global insights at this time.");
     } finally {
       setIsSummarizing(false);
     }
