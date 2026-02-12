@@ -1,7 +1,9 @@
+
 import { createClient } from '@supabase/supabase-js';
 
 /**
- * Advanced environment variable discovery for static web environments.
+ * Robust environment variable discovery. 
+ * Checks build-time, runtime, and manual overrides.
  */
 const getSafeEnv = (key: string): string => {
   try {
@@ -9,74 +11,81 @@ const getSafeEnv = (key: string): string => {
       const stored = localStorage.getItem(`NX_VAL_${key}`);
       if (stored) return stored;
 
-      if ((window as any).process?.env?.[key]) {
-        return (window as any).process.env[key];
-      }
+      // Check for Netlify/Vite prefixed variables first
+      if ((window as any).process?.env?.[`VITE_${key}`]) return (window as any).process.env[`VITE_${key}`];
+      if ((window as any).process?.env?.[key]) return (window as any).process.env[key];
     }
-    if (typeof process !== 'undefined' && process.env?.[key]) {
-      return process.env[key];
-    }
+    
     // @ts-ignore
-    if (typeof import.meta !== 'undefined' && import.meta.env?.[key]) {
-      // @ts-ignore
-      return import.meta.env[key];
+    const env = import.meta.env;
+    if (env?.[`VITE_${key}`]) return env[`VITE_${key}`];
+    if (env?.[key]) return env[key];
+    
+    if (typeof process !== 'undefined' && process.env) {
+      if (process.env[`VITE_${key}`]) return process.env[`VITE_${key}`];
+      if (process.env[key]) return process.env[key];
     }
   } catch (e) {}
   return '';
 };
 
 /**
- * SMART DISCOVERY LOGIC
- * Fixes mismatches where Key and URL might be swapped or incorrectly formatted.
+ * RESOLVER: Identifies and repairs Supabase configuration mismatches.
+ * It ignores the variable name and looks at the actual string content.
  */
-const initializeConnection = () => {
-  const v1 = getSafeEnv('SUPABASE_URL');
-  const v2 = getSafeEnv('SUPABASE_ANON_KEY');
+const resolveConfig = () => {
+  // Grab everything that might be a config
+  const candidates = [
+    getSafeEnv('SUPABASE_URL'),
+    getSafeEnv('SUPABASE_ANON_KEY'),
+    getSafeEnv('URL'),
+    getSafeEnv('KEY')
+  ].filter(v => v && v.length > 5);
 
-  let url = '';
-  let key = '';
+  let resolvedUrl = '';
+  let resolvedKey = '';
 
-  const isUrl = (val: string) => val.includes('supabase.co') || (val.length > 0 && val.length < 40 && !val.includes('sb_') && !val.includes('eyJ'));
-  const isKey = (val: string) => val.startsWith('sb_') || val.startsWith('eyJ') || val.length > 50;
+  candidates.forEach(val => {
+    const v = val.trim();
+    // Pattern: Supabase Keys are long and often start with eyJ (JWT) or sb_
+    if (v.startsWith('eyJ') || v.startsWith('sb_') || v.length > 50) {
+      resolvedKey = v;
+    } 
+    // Pattern: URLs contain dots and usually supabase.co
+    else if (v.includes('.') || v.includes('localhost') || v.includes('supabase')) {
+      resolvedUrl = v;
+    }
+    // Pattern: If it's short and alphanumeric, it might be the project ref
+    else if (v.length >= 15 && v.length <= 25 && !resolvedUrl) {
+      resolvedUrl = `https://${v}.supabase.co`;
+    }
+  });
 
-  // Case 1: Standard placement
-  if (isUrl(v1) && isKey(v2)) {
-    url = v1;
-    key = v2;
-  } 
-  // Case 2: Swapped placement (common mismatch)
-  else if (isKey(v1) && isUrl(v2)) {
-    url = v2;
-    key = v1;
-  }
-  // Case 3: Only one provided, or fallback
-  else {
-    url = v1 || v2;
-    key = v2 || v1;
-  }
-
-  // Format the URL properly
-  if (url && !url.startsWith('http')) {
-    if (url.includes('supabase.co')) {
-      url = `https://${url.trim()}`;
-    } else if (url.trim().length > 0) {
-      url = `https://${url.trim()}.supabase.co`;
+  // Final formatting
+  if (resolvedUrl && !resolvedUrl.startsWith('http')) {
+    resolvedUrl = `https://${resolvedUrl.replace(/^https?:\/\//, '')}`;
+    if (!resolvedUrl.includes('supabase.co') && !resolvedUrl.includes(':')) {
+      resolvedUrl += '.supabase.co';
     }
   }
 
-  return { url, key };
+  return { url: resolvedUrl, key: resolvedKey };
 };
 
-const { url: finalUrl, key: finalKey } = initializeConnection();
+const { url, key } = resolveConfig();
 
+// Config is valid only if we have a real URL and a key
 export const IS_CONFIGURED = !!(
-  finalUrl && 
-  finalUrl.startsWith('http') && 
-  finalUrl.includes('supabase.co') && 
-  finalKey && 
-  finalKey.length > 10
+  url && 
+  url.startsWith('http') && 
+  url.includes('.') && 
+  key && 
+  key.length > 20
 );
 
+/**
+ * Fallback for manual repair in case auto-fix fails
+ */
 export const configureSupabaseManual = (url: string, key: string) => {
   if (typeof localStorage !== 'undefined') {
     localStorage.setItem('NX_VAL_SUPABASE_URL', url.trim());
@@ -93,8 +102,8 @@ export const clearSupabaseConfig = () => {
   }
 };
 
-// Initialize with a safe placeholder if logic fails, but Smart Discovery should handle most cases.
-export const supabase = createClient(
-  IS_CONFIGURED ? finalUrl : 'https://placeholder.supabase.co',
-  IS_CONFIGURED ? finalKey : 'placeholder'
-);
+// Use a valid dummy URL to prevent "Failed to fetch" on malformed strings
+const finalUrl = IS_CONFIGURED ? url : 'https://placeholder.supabase.co';
+const finalKey = IS_CONFIGURED ? key : 'placeholder';
+
+export const supabase = createClient(finalUrl, finalKey);

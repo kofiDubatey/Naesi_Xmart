@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
-import { supabase, IS_CONFIGURED, clearSupabaseConfig } from './supabaseClient';
+import { supabase, IS_CONFIGURED, clearSupabaseConfig, configureSupabaseManual } from './supabaseClient';
 import { Course, Material, Quiz, StudyGroup, AppNotification, UserProfile, NotificationSettings, QuizSettings, StudyGuide, TemporalEvent } from './types';
 import Auth from './components/Auth';
 import Sidebar from './components/Sidebar';
@@ -27,6 +28,58 @@ const ViewLoader = () => (
     <p className="text-[10px] text-cyan-500 font-bold uppercase tracking-[0.4em]">Synchronizing_View_Data...</p>
   </div>
 );
+
+/**
+ * Diagnostic Terminal for broken database links.
+ */
+const ConnectionDiagnostic = ({ error }: { error?: string }) => {
+  const [url, setUrl] = useState('');
+  const [key, setKey] = useState('');
+
+  const handleFix = (e: React.FormEvent) => {
+    e.preventDefault();
+    configureSupabaseManual(url, key);
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-8 text-center">
+      <div className="w-20 h-20 bg-pink-500/10 border border-pink-500/30 rounded-3xl flex items-center justify-center mb-8 animate-pulse">
+        <svg className="w-10 h-10 text-pink-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+      </div>
+      <h1 className="text-3xl font-bold font-space text-white uppercase tracking-tighter mb-4">Neural Link Severed</h1>
+      <p className="text-[10px] text-slate-500 uppercase tracking-[0.3em] max-w-md mb-12">
+        The database connection could not be established. This usually happens if the Supabase URL and API Key are missing or swapped in Netlify.
+      </p>
+
+      <form onSubmit={handleFix} className="glass w-full max-w-md p-8 rounded-[40px] border border-white/10 space-y-6 text-left">
+         <div>
+            <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Supabase URL</label>
+            <input 
+              type="text" 
+              value={url}
+              onChange={e => setUrl(e.target.value)}
+              placeholder="https://xyz.supabase.co"
+              className="w-full bg-slate-900 border border-white/10 rounded-2xl px-5 py-4 text-white focus:border-cyan-500 outline-none"
+            />
+         </div>
+         <div>
+            <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">API Key (Anon)</label>
+            <input 
+              type="password" 
+              value={key}
+              onChange={e => setKey(e.target.value)}
+              placeholder="eyJhbGci..."
+              className="w-full bg-slate-900 border border-white/10 rounded-2xl px-5 py-4 text-white focus:border-cyan-500 outline-none"
+            />
+         </div>
+         <button type="submit" className="w-full py-5 bg-cyan-600 hover:bg-cyan-500 text-slate-950 rounded-2xl font-bold uppercase tracking-widest text-[10px] shadow-2xl shadow-cyan-600/20">
+           Repair Connection
+         </button>
+      </form>
+      <button onClick={clearSupabaseConfig} className="mt-8 text-[9px] text-slate-600 font-bold uppercase tracking-widest">Wipe Saved Overrides</button>
+    </div>
+  );
+};
 
 const App: React.FC = () => {
   const [session, setSession] = useState<any>(null);
@@ -84,16 +137,19 @@ const App: React.FC = () => {
   }, [profile, addSuccess]);
 
   useEffect(() => {
+    if (!IS_CONFIGURED) {
+      setLoading(false);
+      return;
+    }
+
     const initializeAuth = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) throw error;
         setSession(session);
       } catch (err: any) {
-        if (IS_CONFIGURED) {
-          console.error("Auth sync failed", err);
-          setDbError(err.message);
-        }
+        console.error("Critical Connection Error:", err);
+        setDbError(err.message || "Failed to fetch database session.");
       } finally {
         setLoading(false);
       }
@@ -207,6 +263,8 @@ const App: React.FC = () => {
 
   if (loading) return <div className="min-h-screen bg-slate-950 flex items-center justify-center"><ViewLoader /></div>;
   
+  if (!IS_CONFIGURED || dbError) return <ConnectionDiagnostic error={dbError || undefined} />;
+
   if (!session) return <Auth />;
 
   return (
@@ -240,13 +298,6 @@ const App: React.FC = () => {
         </header>
 
         <div className="p-8 max-w-7xl mx-auto w-full">
-          {dbError && (
-            <div className="mb-8 p-4 bg-pink-500/10 border border-pink-500/20 rounded-2xl flex justify-between items-center">
-               <p className="text-[10px] text-pink-400 font-bold uppercase tracking-widest">CRITICAL_SYNC_FAIL: {dbError}</p>
-               <button onClick={clearSupabaseConfig} className="text-[9px] text-white bg-pink-600 px-4 py-1.5 rounded-lg font-bold uppercase">Reset Config</button>
-            </div>
-          )}
-
           <Suspense fallback={<ViewLoader />}>
             {activeTab === 'dashboard' && (
               <Dashboard 
