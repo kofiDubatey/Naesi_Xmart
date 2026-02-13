@@ -50,12 +50,7 @@ const CurriculumView: React.FC<CurriculumViewProps> = ({ materials, courses, set
       setGlobalSummary(response.text || "Insight manifested but stream is silent.");
     } catch (err: any) {
       console.error("Global summary failure:", err);
-      const errorMsg = err.message || 'Connection Interrupted';
-      if (errorMsg.includes('API_KEY_MISSING')) {
-        setGlobalSummary("NEURAL_SYNC_UNAVAILABLE: API_KEY is not configured in the environment.");
-      } else {
-        setGlobalSummary(`Unable to synchronize global insights: ${errorMsg}`);
-      }
+      setGlobalSummary(`Unable to synchronize global insights: ${err.message || 'Connection Interrupted'}`);
     } finally {
       setIsSummarizing(false);
     }

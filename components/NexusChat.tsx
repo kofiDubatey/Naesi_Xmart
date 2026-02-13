@@ -61,7 +61,6 @@ const NexusChat: React.FC<NexusChatProps> = ({ courses, materials, userId, onAwa
 
     try {
       const ai = getAiClient();
-      
       const selectedMaterials = courseMaterials.filter(m => activeMaterialIds.has(m.id));
       const context = selectedMaterials.length > 0 
         ? `Knowledge nodes: ${selectedMaterials.map(m => m.title).join(', ')}`
@@ -79,10 +78,9 @@ const NexusChat: React.FC<NexusChatProps> = ({ courses, materials, userId, onAwa
       onAwardPoints(5, "Knowledge Exchange Performed");
     } catch (err: any) {
       console.error("AI Communication Failure:", err);
-      const errorMsg = err.message || 'Connection Interrupted';
       setHistory([...newHistory, { 
         role: 'model', 
-        parts: [{ text: `NEURAL_LINK_FAILURE: ${errorMsg}. Please ensure the environment is correctly linked and synchronized.` }] 
+        parts: [{ text: `NEURAL_LINK_FAILURE: ${err.message || 'The terminal encountered an unexpected interrupt'}. Please ensure your environment credentials are correct.` }] 
       }]);
     } finally {
       setIsTyping(false);

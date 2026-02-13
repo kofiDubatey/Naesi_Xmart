@@ -2,16 +2,12 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { QuizQuestion, StudyGuide } from "../types";
 
 /**
- * Centralized AI Client Factory.
  * Strictly uses process.env.API_KEY as per system requirements.
  */
-export const getAiClient = () => {
+const createAiClient = () => {
   return new GoogleGenAI({ apiKey: process.env.API_KEY });
 };
 
-/**
- * Utility to wrap AI calls for consistent error handling and logging.
- */
 const wrapAiCall = async <T>(fn: () => Promise<T>, fallback: T, name: string): Promise<T> => {
   try {
     return await fn();
@@ -24,9 +20,8 @@ const wrapAiCall = async <T>(fn: () => Promise<T>, fallback: T, name: string): P
   }
 };
 
-/**
- * Generates a professional pharmacy assessment grounded in specific curriculum materials.
- */
+export const getAiClient = createAiClient;
+
 export const generateProfessionalPharmacyQuiz = async (
   courseName: string, 
   materials: string[], 
@@ -34,26 +29,23 @@ export const generateProfessionalPharmacyQuiz = async (
   difficulty: string = 'standard'
 ): Promise<QuizQuestion[]> => {
   return wrapAiCall(async () => {
-    const ai = getAiClient();
+    const ai = createAiClient();
     const context = materials.filter(m => m && m.trim().length > 0).join("\n\n---\n\n");
     
     if (!context || context.length < 50) {
       throw new Error("INSUFFICIENT_CONTEXT: Grounding materials are required.");
     }
 
-    const prompt = `As a Senior Pharmacy Professor, synthesize a professional pharmaceutical assessment for: "${courseName}".
-    All questions MUST be derived from the CURRICULUM_CONTEXT.
-    
-    CURRICULUM_CONTEXT:
-    ${context.substring(0, 15000)}
-
-    Generate ${count} questions. 
-    Mix Clinical Case Studies, Dosage Calculations, and Pharmacology MCQs.
-    Difficulty: ${difficulty}.`;
-
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-preview',
-      contents: prompt,
+      contents: `As a Senior Pharmacy Professor, synthesize a professional pharmaceutical assessment for: "${courseName}".
+      All questions MUST be derived from the CURRICULUM_CONTEXT.
+      
+      CURRICULUM_CONTEXT:
+      ${context.substring(0, 15000)}
+
+      Generate ${count} questions. Mix Clinical Case Studies, Dosage Calculations, and Pharmacology MCQs.
+      Difficulty: ${difficulty}.`,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -77,13 +69,9 @@ export const generateProfessionalPharmacyQuiz = async (
   }, [], "Professional Pharmacy Quiz Generation");
 };
 
-/**
- * Deep Clinical Path Analysis
- */
-// Fix: Completed truncated implementation and fixed type inconsistency
 export const analyzeClinicalPath = async (quizTitle: string, questions: QuizQuestion[], userAnswers: number[]): Promise<string> => {
   return wrapAiCall(async () => {
-    const ai = getAiClient();
+    const ai = createAiClient();
     const performanceContext = questions.map((q, i) => ({
       question: q.question,
       userAnswer: q.options[userAnswers[i]] || "No Answer",
@@ -92,105 +80,68 @@ export const analyzeClinicalPath = async (quizTitle: string, questions: QuizQues
       isCorrect: userAnswers[i] === q.correctAnswer
     }));
 
-    const prompt = `As a Senior Clinical Preceptor, analyze this student's performance on "${quizTitle}".
-    Provide a detailed clinical remediation report. Identify strengths, weaknesses in their reasoning, and specific pharmaceutical concepts to revisit.
-    
-    PERFORMANCE_DATA:
-    ${JSON.stringify(performanceContext)}
-    
-    Structure with Markdown headers (###) and bullet points.`;
-
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: prompt,
+      model: 'gemini-3-pro-preview',
+      contents: `As a Senior Clinical Preceptor, analyze this student's performance on "${quizTitle}".
+      Provide a detailed clinical remediation report. Identify strengths, weaknesses in their reasoning, and specific pharmaceutical concepts to revisit.
+      
+      PERFORMANCE_DATA:
+      ${JSON.stringify(performanceContext)}
+      
+      Structure with Markdown headers (###) and bullet points.`,
     });
 
     return response.text || "Analysis stream silent.";
   }, "NEURAL_SYNC_ERROR: Analysis synthesis failed.", "Clinical Path Analysis");
 };
 
-/**
- * Assessment Feedback Generation
- */
-// Fix: Implemented missing getFeedback export
 export const getFeedback = async (score: number, total: number, title: string): Promise<string> => {
   return wrapAiCall(async () => {
-    const ai = getAiClient();
-    const percentage = Math.round((score / total) * 100);
-    const prompt = `Provide a short, motivating, and professional feedback message for a pharmacy student who scored ${score}/${total} (${percentage}%) on an assessment titled "${title}". Use a high-tech/cyberpunk clinical tone.`;
-
+    const ai = createAiClient();
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: prompt,
+      contents: `Provide motivating and professional feedback for a pharmacy student who scored ${score}/${total} on "${title}". High-tech clinical tone.`,
     });
-
     return response.text || "Feedback synchronized.";
   }, "NEURAL_SYNC_ERROR: Feedback loop offline.", "Assessment Feedback");
 };
 
-/**
- * Material Summary Synthesis
- */
-// Fix: Implemented missing generateSummary export
 export const generateSummary = async (content: string, title: string): Promise<string> => {
   return wrapAiCall(async () => {
-    const ai = getAiClient();
-    const prompt = `Summarize the following pharmaceutical material titled "${title}". 
-    Focus on key therapeutic classes, mechanisms, and clinical pearls. 
-    Keep it concise and structured.
-    
-    CONTENT:
-    ${content.substring(0, 10000)}`;
-
+    const ai = createAiClient();
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: prompt,
+      contents: `Summarize the following pharmaceutical material: "${title}". 
+      Focus on key therapeutic classes and clinical pearls.
+      
+      CONTENT:
+      ${content.substring(0, 8000)}`,
     });
-
     return response.text || "Summary synthesized.";
   }, "NEURAL_SYNC_ERROR: Summary synthesis interrupted.", "Material Summary");
 };
 
-/**
- * AI Avatar Manifestation
- */
-// Fix: Implemented missing generateAvatar export using gemini-2.5-flash-image
 export const generateAvatar = async (prompt: string): Promise<string> => {
   return wrapAiCall(async () => {
-    const ai = getAiClient();
+    const ai = createAiClient();
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
-      contents: {
-        parts: [{ text: `A futuristic, professional medical profile avatar: ${prompt}` }]
-      }
+      contents: { parts: [{ text: `A futuristic professional medical profile avatar: ${prompt}` }] }
     });
-
     for (const part of response.candidates[0].content.parts) {
-      if (part.inlineData) {
-        return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-      }
+      if (part.inlineData) return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
     }
-    throw new Error("No image data in response");
+    throw new Error("No image data found");
   }, "https://api.dicebear.com/7.x/bottts/svg?seed=fallback", "Avatar Generation");
 };
 
-/**
- * Comprehensive Study Guide Synthesis
- */
-// Fix: Implemented missing generateStudyGuide export
 export const generateStudyGuide = async (content: string, title: string): Promise<StudyGuide> => {
   return wrapAiCall(async () => {
-    const ai = getAiClient();
-    const prompt = `Synthesize a comprehensive study protocol (guide) based on the following material: "${title}".
-    
-    MATERIAL_CONTENT:
-    ${content.substring(0, 15000)}
-    
-    Return a JSON object with: learning_path, concept_breakdown, practice_questions, and clinical_scenarios.`;
-
+    const ai = createAiClient();
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-preview',
-      contents: prompt,
+      contents: `Synthesize a study protocol (guide) based on: "${title}". 
+      Content: ${content.substring(0, 15000)}`,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -238,28 +189,16 @@ export const generateStudyGuide = async (content: string, title: string): Promis
         }
       }
     });
-
     return JSON.parse(response.text || "{}");
   }, {} as StudyGuide, "Study Guide Generation");
 };
 
-/**
- * Quiz Synthesis from Study Protocol
- */
-// Fix: Implemented missing generateQuizFromGuide export
 export const generateQuizFromGuide = async (guide: StudyGuide, count: number): Promise<QuizQuestion[]> => {
   return wrapAiCall(async () => {
-    const ai = getAiClient();
-    const prompt = `Based on the following study protocol, generate ${count} additional pharmaceutical assessment questions.
-    
-    PROTOCOL_CONTEXT:
-    ${JSON.stringify(guide)}
-    
-    Return a JSON array of QuizQuestion objects.`;
-
+    const ai = createAiClient();
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: prompt,
+      contents: `Based on this study protocol: ${JSON.stringify(guide)}, generate ${count} additional practice questions.`,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -270,15 +209,13 @@ export const generateQuizFromGuide = async (guide: StudyGuide, count: number): P
               question: { type: Type.STRING },
               options: { type: Type.ARRAY, items: { type: Type.STRING } },
               correctAnswer: { type: Type.INTEGER },
-              explanation: { type: Type.STRING },
-              category: { type: Type.STRING }
+              explanation: { type: Type.STRING }
             },
             required: ["question", "options", "correctAnswer", "explanation"]
           }
         }
       }
     });
-
     return JSON.parse(response.text || "[]");
   }, [], "Quiz from Guide Generation");
 };
