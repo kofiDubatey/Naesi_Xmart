@@ -44,8 +44,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, points, isSu
   const progressToNextLevel = ((points % 500) / 500) * 100;
 
   return (
-    <aside className="w-20 md:w-64 glass border-r border-white/5 h-screen sticky top-0 flex flex-col items-center md:items-start transition-all duration-300 z-50" role="navigation" aria-label="Main Navigation">
-      <div className="p-6 w-full flex items-center gap-3">
+    <aside className="fixed bottom-0 inset-x-0 md:inset-x-auto md:bottom-auto md:sticky md:top-0 h-20 md:h-[100dvh] w-full md:w-64 glass border-t md:border-t-0 md:border-r border-white/5 flex items-center md:items-stretch md:flex-col transition-all duration-300 z-50" role="navigation" aria-label="Main Navigation">
+      <div className="hidden md:flex p-6 w-full items-center gap-3">
         <div className={`w-10 h-10 rounded-lg flex items-center justify-center shadow-lg shadow-cyan-500/10 overflow-hidden ${logoError ? 'bg-gradient-to-br from-cyan-400 to-blue-600' : 'bg-white'}`}>
           {!logoError ? (
             <img 
@@ -61,27 +61,29 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, points, isSu
         <span className="hidden md:block font-space font-bold text-xl tracking-wider uppercase">Naesi Xmart</span>
       </div>
 
-      <nav className="mt-6 flex-1 w-full space-y-2 px-3 overflow-y-auto custom-scrollbar">
+      <nav className="flex-1 w-full md:mt-6 space-y-0 md:space-y-2 px-2 md:px-3 overflow-x-auto md:overflow-y-auto custom-scrollbar">
+        <div className="flex md:block min-w-max md:min-w-0 items-center">
         {menuItems.map((item) => (
           <button
             key={item.id}
             onClick={() => setActiveTab(item.id)}
             aria-current={activeTab === item.id ? 'page' : undefined}
-            className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
+            className={`flex-shrink-0 md:w-full flex items-center justify-center md:justify-start gap-2 md:gap-4 px-3 md:px-4 py-3 rounded-xl transition-all group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
               activeTab === item.id 
                 ? item.id === 'admin' 
-                  ? 'bg-gradient-to-r from-amber-500/20 to-transparent text-amber-500 border-l-4 border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.1)]'
-                  : 'bg-gradient-to-r from-cyan-500/20 to-transparent text-cyan-400 border-l-4 border-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.1)]' 
+                  ? 'bg-gradient-to-r from-amber-500/20 to-transparent text-amber-500 border-t-2 md:border-t-0 md:border-l-4 border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.1)]'
+                  : 'bg-gradient-to-r from-cyan-500/20 to-transparent text-cyan-400 border-t-2 md:border-t-0 md:border-l-4 border-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.1)]' 
                 : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
             }`}
           >
             <item.icon className={`w-6 h-6 transition-transform group-hover:scale-110`} aria-hidden="true" />
-            <span className="hidden md:block font-medium tracking-wide">{item.label}</span>
+            <span className="hidden lg:block font-medium tracking-wide whitespace-nowrap">{item.label}</span>
           </button>
         ))}
+        </div>
       </nav>
 
-      <div className="p-4 w-full space-y-4">
+      <div className="hidden md:block p-4 w-full space-y-4">
         <div className="hidden md:block glass rounded-2xl p-4 text-xs border border-white/5 bg-slate-900/40" aria-label={`Level ${level} progress: ${Math.round(progressToNextLevel)} percent`}>
           <div className="flex justify-between items-center mb-2">
             <span className="text-slate-400 font-bold uppercase tracking-widest">Level {level}</span>

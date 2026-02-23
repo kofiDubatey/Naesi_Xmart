@@ -2,19 +2,40 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { QuizQuestion, StudyGuide } from "../types";
 
 /**
- * Strictly uses process.env.API_KEY as per system requirements.
+ * AI Client Factory.
+ * Resolves Gemini API key from Vite/runtime env in a deterministic order.
  */
-const createAiClient = () => {
-  return new GoogleGenAI({ apiKey: process.env.API_KEY });
+const resolveGeminiApiKey = (): string => {
+  // @ts-ignore
+  const viteEnv = import.meta?.env as Record<string, string | undefined> | undefined;
+  const apiKey = (
+    viteEnv?.VITE_GEMINI_API_KEY ||
+    viteEnv?.VITE_API_KEY ||
+    process.env.GEMINI_API_KEY ||
+    process.env.API_KEY ||
+    ''
+  ).trim();
+
+  if (!apiKey || apiKey === 'PLACEHOLDER_API_KEY' || apiKey.includes('PLACEHOLDER')) {
+    throw new Error('GEMINI_API_KEY_MISSING: Set VITE_GEMINI_API_KEY in .env.local and restart the dev server.');
+  }
+
+  return apiKey;
 };
 
-const wrapAiCall = async <T>(fn: () => Promise<T>, fallback: T, name: string): Promise<T> => {
+const createAiClient = () => {
+  const apiKey = resolveGeminiApiKey();
+  return new GoogleGenAI({ apiKey });
+};
+
+const wrapAiCall = async <T>(fn: (ai: GoogleGenAI) => Promise<T>, fallback: T, name: string): Promise<T> => {
   try {
-    return await fn();
+    const ai = createAiClient();
+    return await fn(ai);
   } catch (error: any) {
     console.error(`[AI Service] ${name} Failure:`, error);
     if (typeof fallback === 'string') {
-      return `NEURAL_SYNC_ERROR: ${error.message || 'Connection Interrupted'}` as unknown as T;
+      return `NEURAL_SYNC_ERROR: ${error.message || 'Connection Interrupted'}. Check terminal logs.` as unknown as T;
     }
     return fallback;
   }
@@ -28,8 +49,7 @@ export const generateProfessionalPharmacyQuiz = async (
   count: number = 5, 
   difficulty: string = 'standard'
 ): Promise<QuizQuestion[]> => {
-  return wrapAiCall(async () => {
-    const ai = createAiClient();
+  return wrapAiCall(async (ai) => {
     const context = materials.filter(m => m && m.trim().length > 0).join("\n\n---\n\n");
     
     if (!context || context.length < 50) {
@@ -70,8 +90,7 @@ export const generateProfessionalPharmacyQuiz = async (
 };
 
 export const analyzeClinicalPath = async (quizTitle: string, questions: QuizQuestion[], userAnswers: number[]): Promise<string> => {
-  return wrapAiCall(async () => {
-    const ai = createAiClient();
+  return wrapAiCall(async (ai) => {
     const performanceContext = questions.map((q, i) => ({
       question: q.question,
       userAnswer: q.options[userAnswers[i]] || "No Answer",
@@ -96,8 +115,7 @@ export const analyzeClinicalPath = async (quizTitle: string, questions: QuizQues
 };
 
 export const getFeedback = async (score: number, total: number, title: string): Promise<string> => {
-  return wrapAiCall(async () => {
-    const ai = createAiClient();
+  return wrapAiCall(async (ai) => {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: `Provide motivating and professional feedback for a pharmacy student who scored ${score}/${total} on "${title}". High-tech clinical tone.`,
@@ -107,8 +125,7 @@ export const getFeedback = async (score: number, total: number, title: string): 
 };
 
 export const generateSummary = async (content: string, title: string): Promise<string> => {
-  return wrapAiCall(async () => {
-    const ai = createAiClient();
+  return wrapAiCall(async (ai) => {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: `Summarize the following pharmaceutical material: "${title}". 
@@ -122,8 +139,7 @@ export const generateSummary = async (content: string, title: string): Promise<s
 };
 
 export const generateAvatar = async (prompt: string): Promise<string> => {
-  return wrapAiCall(async () => {
-    const ai = createAiClient();
+  return wrapAiCall(async (ai) => {
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
       contents: { parts: [{ text: `A futuristic professional medical profile avatar: ${prompt}` }] }
@@ -136,8 +152,7 @@ export const generateAvatar = async (prompt: string): Promise<string> => {
 };
 
 export const generateStudyGuide = async (content: string, title: string): Promise<StudyGuide> => {
-  return wrapAiCall(async () => {
-    const ai = createAiClient();
+  return wrapAiCall(async (ai) => {
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-preview',
       contents: `Synthesize a study protocol (guide) based on: "${title}". 
@@ -194,8 +209,7 @@ export const generateStudyGuide = async (content: string, title: string): Promis
 };
 
 export const generateQuizFromGuide = async (guide: StudyGuide, count: number): Promise<QuizQuestion[]> => {
-  return wrapAiCall(async () => {
-    const ai = createAiClient();
+  return wrapAiCall(async (ai) => {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: `Based on this study protocol: ${JSON.stringify(guide)}, generate ${count} additional practice questions.`,

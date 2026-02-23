@@ -268,7 +268,7 @@ const App: React.FC = () => {
   if (!session) return <Auth />;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200 flex font-sans selection:bg-cyan-500/30">
+    <div className="min-h-[100dvh] bg-slate-950 text-slate-200 md:flex font-sans selection:bg-cyan-500/30 pb-24 md:pb-0">
       <Sidebar 
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 
@@ -276,14 +276,14 @@ const App: React.FC = () => {
         isSuperAdmin={isSuperAdmin}
       />
       
-      <main className="flex-1 overflow-y-auto custom-scrollbar h-screen">
-        <header className="p-8 flex justify-between items-center border-b border-white/5 sticky top-0 bg-slate-950/80 backdrop-blur-md z-40">
+      <main className="flex-1 overflow-y-auto custom-scrollbar min-h-[100dvh] md:h-[100dvh]">
+        <header className="px-4 py-4 md:p-8 flex justify-between items-center border-b border-white/5 sticky top-0 bg-slate-950/80 backdrop-blur-md z-40">
           <div>
-            <h2 className="text-sm font-bold font-space uppercase tracking-[0.4em] text-cyan-400">Naesi_Terminal_v4</h2>
+            <h2 className="text-xs md:text-sm font-bold font-space uppercase tracking-[0.25em] md:tracking-[0.4em] text-cyan-400">Naesi_Terminal_v4</h2>
             <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Status: SYNCHRONIZED</p>
           </div>
           
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-3 md:gap-6">
             <div className="hidden md:flex flex-col items-end">
               <p className="text-xs font-bold text-white uppercase tracking-tight">{profile?.name || 'Anonymous'}</p>
               <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">{profile?.title || 'Student'}</p>
@@ -297,7 +297,7 @@ const App: React.FC = () => {
           </div>
         </header>
 
-        <div className="p-8 max-w-7xl mx-auto w-full">
+        <div className="p-4 md:p-8 max-w-7xl mx-auto w-full">
           <Suspense fallback={<ViewLoader />}>
             {activeTab === 'dashboard' && (
               <Dashboard 
@@ -414,7 +414,7 @@ const App: React.FC = () => {
       </main>
 
       {/* Notification HUD */}
-      <div className="fixed bottom-8 right-8 z-[100] flex flex-col gap-4 w-80 pointer-events-none">
+      <div className="fixed bottom-24 md:bottom-8 right-4 md:right-8 z-[100] flex flex-col gap-4 w-[calc(100vw-2rem)] max-w-80 pointer-events-none">
         {notifications.map(n => (
           <div key={n.id} className={`pointer-events-auto p-4 rounded-2xl border flex gap-4 animate-in slide-in-from-right-8 duration-500 shadow-2xl backdrop-blur-xl ${
             n.type === 'error' ? 'bg-pink-500/10 border-pink-500/20 text-pink-400' : 

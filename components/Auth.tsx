@@ -94,19 +94,20 @@ const Auth: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-slate-950 relative overflow-hidden" role="main">
+    <div className="min-h-[100dvh] grid place-items-center px-4 py-8 sm:p-6 bg-slate-950 relative overflow-x-hidden overflow-y-auto" role="main">
       <div className="absolute inset-0 bg-mesh opacity-10" aria-hidden="true"></div>
-      <div className="glow-orb bg-cyan-500 w-[600px] h-[600px] -top-20 -left-20 opacity-5 blur-[120px]" aria-hidden="true"></div>
+      <div className="glow-orb absolute bg-cyan-500 w-[600px] h-[600px] -top-20 -left-20 opacity-5 blur-[120px]" aria-hidden="true"></div>
+      <div className="glow-orb absolute bg-indigo-500 w-[520px] h-[520px] -bottom-24 -right-20 opacity-5 blur-[120px]" aria-hidden="true"></div>
       
-      <div className="glass w-full max-w-md p-10 rounded-[40px] border border-white/10 relative z-10 animate-in zoom-in-95 duration-500 shadow-2xl">
+      <div className="glass w-full max-w-md p-6 sm:p-10 rounded-[28px] sm:rounded-[40px] border border-white/10 relative z-10 animate-in zoom-in-95 duration-500 shadow-2xl mx-auto">
         <div className="hud-corner hud-tl border-cyan-500/30"></div>
         <div className="hud-corner hud-br border-cyan-500/30"></div>
         
-        <div className="flex flex-col items-center mb-10 text-center">
+        <div className="flex flex-col items-center mb-8 sm:mb-10 text-center">
           <div 
             onClick={() => { if(!showInit) setShowInit(true) }}
             className="w-20 h-20 bg-gradient-to-br from-cyan-400 to-indigo-600 rounded-3xl flex items-center justify-center shadow-2xl shadow-cyan-500/20 mb-6 font-space font-bold text-3xl text-slate-900 animate-pulse cursor-help" aria-hidden="true">NX</div>
-          <h1 className="text-3xl font-bold font-space text-white uppercase tracking-tighter">Naesi Xmart</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold font-space text-white uppercase tracking-tighter">Naesi Xmart</h1>
           <p className="text-[10px] text-cyan-400 font-bold uppercase tracking-[0.4em] mt-1">
             {isForgotPassword ? 'RECOVERY_PORTAL' : isSignUp ? 'IDENTITY_MANIFESTATION' : 'NEURAL_ACCESS_STATION'}
           </p>
