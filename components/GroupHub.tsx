@@ -165,10 +165,10 @@ const GroupHub: React.FC<GroupHubProps> = ({ groups, availableQuizzes, onAwardPo
   }, [groupMembers]);
 
   return (
-    <div className="h-[calc(100vh-14rem)] flex gap-6 animate-in slide-in-from-right-4 duration-700">
+    <div className="min-h-[calc(100dvh-14rem)] flex flex-col xl:flex-row gap-4 md:gap-6 animate-in slide-in-from-right-4 duration-700">
       {/* Groups Sidebar: Node Cluster Directory */}
-      <div className="w-80 glass rounded-[40px] border border-white/5 flex flex-col bg-slate-900/40 relative overflow-hidden">
-        <div className="p-8 border-b border-white/5 bg-white/5">
+      <div className="w-full xl:w-80 glass rounded-[28px] md:rounded-[40px] border border-white/5 flex flex-col bg-slate-900/40 relative overflow-hidden max-h-[40dvh] xl:max-h-none">
+        <div className="p-4 md:p-8 border-b border-white/5 bg-white/5">
           <div className="flex justify-between items-center">
              <div className="flex items-center gap-3">
                 <ICONS.Group className="w-4 h-4 text-cyan-400" />
@@ -184,7 +184,7 @@ const GroupHub: React.FC<GroupHubProps> = ({ groups, availableQuizzes, onAwardPo
           <p className="text-[9px] text-slate-500 mt-2 uppercase tracking-widest font-bold">Active Sync Channels</p>
         </div>
         
-        <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-3 custom-scrollbar">
           {groups.map(group => (
             <button 
               key={group.id}
@@ -218,39 +218,41 @@ const GroupHub: React.FC<GroupHubProps> = ({ groups, availableQuizzes, onAwardPo
       </div>
 
       {/* Main Content Area: Sync Terminal */}
-      <div className="flex-1 glass rounded-[40px] border border-white/5 flex flex-col overflow-hidden bg-slate-900/20 relative">
-        <div className="p-8 border-b border-white/5 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-white/5">
+      <div className="flex-1 min-w-0 glass rounded-[28px] md:rounded-[40px] border border-white/5 flex flex-col overflow-hidden bg-slate-900/20 relative">
+        <div className="p-4 md:p-8 border-b border-white/5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-6 bg-white/5">
           <div>
             <div className="flex items-center gap-4">
-              <h3 className="font-bold font-space text-2xl text-white uppercase tracking-tighter">{activeGroup?.name || 'Select_Cluster'}</h3>
+              <h3 className="font-bold font-space text-lg md:text-2xl text-white uppercase tracking-tighter">{activeGroup?.name || 'Select_Cluster'}</h3>
               <span className="px-3 py-1 bg-cyan-500/10 border border-cyan-500/20 rounded-full text-[9px] font-bold text-cyan-400 uppercase tracking-widest">Active_Sync</span>
             </div>
           </div>
           
-          <div className="flex bg-slate-950/50 p-1.5 rounded-2xl border border-white/5 shadow-inner">
+          <div className="w-full md:w-auto overflow-x-auto">
+          <div className="flex min-w-max bg-slate-950/50 p-1.5 rounded-2xl border border-white/5 shadow-inner">
             {(['chat', 'challenges', 'leaderboard', 'members'] as const).map(mode => (
               <button 
                 key={mode} 
                 onClick={() => setViewMode(mode)}
-                className={`px-6 py-2.5 rounded-xl text-[9px] font-bold uppercase tracking-[0.2em] transition-all relative ${viewMode === mode ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-600/30' : 'text-slate-500 hover:text-slate-300'}`}
+                className={`px-3 md:px-6 py-2.5 rounded-xl text-[9px] font-bold uppercase tracking-[0.2em] transition-all relative ${viewMode === mode ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-600/30' : 'text-slate-500 hover:text-slate-300'}`}
               >
                 {mode}
               </button>
             ))}
+          </div>
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto custom-scrollbar relative">
           {viewMode === 'chat' && (
             <div className="h-full flex flex-col">
-              <div className="flex-1 p-8 space-y-6">
+              <div className="flex-1 p-4 md:p-8 space-y-4 md:space-y-6">
                 {messages.map((msg) => (
                   <div key={msg.id} className={`flex ${msg.sender_id === currentUserId ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2 duration-300`}>
-                    <div className={`max-w-[75%] space-y-2 ${msg.sender_id === currentUserId ? 'items-end' : 'items-start'}`}>
+                    <div className={`max-w-[92%] md:max-w-[75%] space-y-2 ${msg.sender_id === currentUserId ? 'items-end' : 'items-start'}`}>
                       <div className="flex items-center gap-2 px-2">
                          {msg.sender_id !== currentUserId && <span className="text-[9px] font-bold text-cyan-400 uppercase tracking-widest">{msg.sender_name}</span>}
                       </div>
-                      <div className={`p-5 rounded-[28px] ${msg.sender_id === currentUserId ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-slate-800/80 border border-white/5 text-slate-100 rounded-tl-none'}`}>
+                      <div className={`p-4 md:p-5 rounded-[22px] md:rounded-[28px] ${msg.sender_id === currentUserId ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-slate-800/80 border border-white/5 text-slate-100 rounded-tl-none'}`}>
                         <p className="text-sm leading-relaxed">{msg.text}</p>
                       </div>
                     </div>
@@ -258,26 +260,26 @@ const GroupHub: React.FC<GroupHubProps> = ({ groups, availableQuizzes, onAwardPo
                 ))}
                 <div ref={chatEndRef} />
               </div>
-              <form onSubmit={handleSendMessage} className="p-8 bg-slate-950/50 border-t border-white/5">
+              <form onSubmit={handleSendMessage} className="p-4 md:p-8 bg-slate-950/50 border-t border-white/5">
                 <input 
                   type="text" 
                   value={inputText}
                   onChange={e => setInputText(e.target.value)}
                   placeholder="Transmit signal..."
-                  className="w-full bg-slate-900 border border-white/10 rounded-2xl px-8 py-5 focus:border-cyan-500 outline-none text-white placeholder:text-slate-600"
+                  className="w-full bg-slate-900 border border-white/10 rounded-2xl px-4 md:px-8 py-4 md:py-5 focus:border-cyan-500 outline-none text-white placeholder:text-slate-600"
                 />
               </form>
             </div>
           )}
 
           {viewMode === 'leaderboard' && (
-            <div className="p-10 space-y-4">
+            <div className="p-4 md:p-10 space-y-4">
               {leaderboardData.map((user, i) => (
-                <div key={i} className={`flex items-center justify-between p-6 rounded-3xl border ${user.id === currentUserId ? 'bg-cyan-500/10 border-cyan-500/30' : 'bg-slate-900/50 border-white/5'}`}>
-                   <div className="flex items-center gap-6">
+                <div key={i} className={`flex items-center justify-between p-4 md:p-6 rounded-3xl border ${user.id === currentUserId ? 'bg-cyan-500/10 border-cyan-500/30' : 'bg-slate-900/50 border-white/5'}`}>
+                   <div className="flex items-center gap-4 md:gap-6">
                       <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center font-bold font-space text-slate-500 border border-white/10">{user.rank}</div>
                       <div>
-                         <p className="font-bold text-white uppercase tracking-tight">{user.name}</p>
+                         <p className="font-bold text-sm md:text-base text-white uppercase tracking-tight">{user.name}</p>
                          <p className="text-[9px] text-slate-500 font-bold">PROFICIENCY: {user.points} XP</p>
                       </div>
                    </div>
@@ -288,7 +290,7 @@ const GroupHub: React.FC<GroupHubProps> = ({ groups, availableQuizzes, onAwardPo
           )}
 
           {viewMode === 'challenges' && (
-            <div className="p-10 space-y-10">
+            <div className="p-4 md:p-10 space-y-8 md:space-y-10">
                <h4 className="text-sm font-bold font-space text-white uppercase tracking-[0.3em]">Tactical Broadcasts</h4>
                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {availableQuizzes.filter(q => !q.completed).map(quiz => (
@@ -308,10 +310,10 @@ const GroupHub: React.FC<GroupHubProps> = ({ groups, availableQuizzes, onAwardPo
           )}
 
           {viewMode === 'members' && (
-            <div className="p-10 space-y-8">
-               <div className="glass p-8 rounded-[40px] border border-cyan-500/20 bg-cyan-500/5">
+            <div className="p-4 md:p-10 space-y-8">
+               <div className="glass p-4 md:p-8 rounded-[28px] md:rounded-[40px] border border-cyan-500/20 bg-cyan-500/5">
                   <h4 className="text-xs font-bold font-space text-white uppercase tracking-widest mb-6">User Discovery Matrix</h4>
-                  <div className="flex gap-4 mb-8">
+                  <div className="flex flex-col sm:flex-row gap-3 md:gap-4 mb-8">
                     <input 
                       type="text" 
                       value={searchQuery}
@@ -321,7 +323,7 @@ const GroupHub: React.FC<GroupHubProps> = ({ groups, availableQuizzes, onAwardPo
                     />
                     <button 
                       onClick={handleSearchUsers}
-                      className="px-8 bg-cyan-600 hover:bg-cyan-500 text-slate-950 rounded-2xl font-bold uppercase text-[10px] tracking-widest"
+                      className="px-8 py-3 bg-cyan-600 hover:bg-cyan-500 text-slate-950 rounded-2xl font-bold uppercase text-[10px] tracking-widest"
                     >
                       Search
                     </button>

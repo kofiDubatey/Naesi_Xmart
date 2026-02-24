@@ -88,13 +88,13 @@ const NexusChat: React.FC<NexusChatProps> = ({ courses, materials, userId, onAwa
   };
 
   return (
-    <div className="h-[calc(100vh-14rem)] flex gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <div className="w-80 flex flex-col gap-6">
-        <div className="glass rounded-[32px] border border-white/5 flex flex-col bg-slate-900/40 h-1/3 overflow-hidden">
-          <div className="p-6 border-b border-white/5">
+    <div className="min-h-[calc(100dvh-14rem)] flex flex-col xl:flex-row gap-4 md:gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <div className="w-full xl:w-80 flex flex-col gap-4 md:gap-6">
+        <div className="glass rounded-[24px] md:rounded-[32px] border border-white/5 flex flex-col bg-slate-900/40 max-h-72 xl:h-1/3 overflow-hidden">
+          <div className="p-4 md:p-6 border-b border-white/5">
             <h3 className="font-bold text-[10px] text-cyan-400 uppercase tracking-widest">Module_Nexus</h3>
           </div>
-          <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
+          <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-2 custom-scrollbar">
             {courses.map(course => (
               <button key={course.id} onClick={() => startNewDiscussion(course.id)} className={`w-full p-4 rounded-2xl text-left transition-all ${selectedCourseId === course.id ? 'bg-cyan-500/20 border border-cyan-500/30' : 'hover:bg-white/5'}`}>
                 <p className="font-bold text-xs text-slate-200 uppercase">{course.name}</p>
@@ -102,11 +102,11 @@ const NexusChat: React.FC<NexusChatProps> = ({ courses, materials, userId, onAwa
             ))}
           </div>
         </div>
-        <div className="glass rounded-[32px] border border-cyan-500/20 flex flex-col bg-cyan-500/5 h-2/3 overflow-hidden">
-          <div className="p-6 border-b border-white/5">
+        <div className="glass rounded-[24px] md:rounded-[32px] border border-cyan-500/20 flex flex-col bg-cyan-500/5 max-h-80 xl:h-2/3 overflow-hidden">
+          <div className="p-4 md:p-6 border-b border-white/5">
              <h3 className="font-bold text-[10px] text-white uppercase tracking-widest">Knowledge_Core</h3>
           </div>
-          <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+          <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-3 custom-scrollbar">
             {courseMaterials.map(mat => (
               <div key={mat.id} onClick={() => {
                 const next = new Set(activeMaterialIds);
@@ -120,21 +120,21 @@ const NexusChat: React.FC<NexusChatProps> = ({ courses, materials, userId, onAwa
         </div>
       </div>
 
-      <div className="flex-1 glass rounded-[40px] border border-white/5 flex flex-col overflow-hidden bg-slate-900/20 relative">
+      <div className="flex-1 min-w-0 glass rounded-[28px] md:rounded-[40px] border border-white/5 flex flex-col overflow-hidden bg-slate-900/20 relative">
         {!selectedCourseId ? (
-          <div className="flex-1 flex flex-col items-center justify-center p-12 text-center">
-             <h3 className="text-2xl font-bold font-space text-white uppercase tracking-tighter mb-2">Nexus Terminal Offline</h3>
+          <div className="flex-1 flex flex-col items-center justify-center p-6 md:p-12 text-center">
+             <h3 className="text-xl md:text-2xl font-bold font-space text-white uppercase tracking-tighter mb-2">Nexus Terminal Offline</h3>
              <p className="text-xs text-slate-500 uppercase tracking-widest">Select a curriculum module to initiate neural link</p>
           </div>
         ) : (
           <>
-            <div className="p-6 border-b border-white/5 bg-white/5 flex justify-between items-center">
-              <h3 className="font-bold font-space text-lg text-white uppercase">{selectedCourse?.name}</h3>
+            <div className="p-4 md:p-6 border-b border-white/5 bg-white/5 flex justify-between items-center">
+              <h3 className="font-bold font-space text-base md:text-lg text-white uppercase">{selectedCourse?.name}</h3>
             </div>
-            <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 md:space-y-8 custom-scrollbar">
               {history.map((msg, i) => (
                 <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`p-6 rounded-[32px] max-w-[90%] ${msg.role === 'user' ? 'bg-cyan-600/20 border-cyan-500/30 ml-auto' : 'bg-slate-900 border-white/5'}`}>
+                  <div className={`p-4 md:p-6 rounded-[24px] md:rounded-[32px] max-w-[94%] md:max-w-[90%] ${msg.role === 'user' ? 'bg-cyan-600/20 border-cyan-500/30 ml-auto' : 'bg-slate-900 border-white/5'}`}>
                     {msg.role === 'model' ? (
                       <FormattedText text={msg.parts[0].text} />
                     ) : (
@@ -146,10 +146,10 @@ const NexusChat: React.FC<NexusChatProps> = ({ courses, materials, userId, onAwa
               {isTyping && <div className="text-[10px] text-slate-500 animate-pulse uppercase tracking-widest">Synthesizing_Analysis...</div>}
               <div ref={chatEndRef} />
             </div>
-            <form onSubmit={handleSend} className="p-8 bg-slate-950/50 border-t border-white/5">
-                <div className="flex gap-4">
-                  <input type="text" value={input} onChange={e => setInput(e.target.value)} placeholder="Consult nexus..." className="flex-1 bg-slate-900 border border-white/10 rounded-2xl px-8 py-5 focus:border-cyan-500 outline-none text-white placeholder:text-slate-700" />
-                  <button type="submit" disabled={isTyping} className="px-8 bg-cyan-600 hover:bg-cyan-500 text-slate-950 rounded-2xl font-bold uppercase text-[10px] tracking-widest transition-all">Transmit</button>
+            <form onSubmit={handleSend} className="p-4 md:p-8 bg-slate-950/50 border-t border-white/5">
+                <div className="flex gap-2 md:gap-4">
+                  <input type="text" value={input} onChange={e => setInput(e.target.value)} placeholder="Consult nexus..." className="flex-1 bg-slate-900 border border-white/10 rounded-2xl px-4 md:px-8 py-4 md:py-5 focus:border-cyan-500 outline-none text-white placeholder:text-slate-700" />
+                  <button type="submit" disabled={isTyping} className="px-4 md:px-8 bg-cyan-600 hover:bg-cyan-500 text-slate-950 rounded-2xl font-bold uppercase text-[10px] tracking-widest transition-all">Transmit</button>
                 </div>
             </form>
           </>
