@@ -3,6 +3,7 @@ import React, { useState, useMemo, useRef } from 'react';
 import { Course, Material, Quiz, QuizSettings } from '../types';
 import { supabase } from '../supabaseClient';
 import { ICONS } from '../constants';
+import { extractTextFromPdf } from '../services/documentText';
 
 interface CourseManagerProps {
   courses: Course[];
@@ -28,6 +29,7 @@ const CourseManager: React.FC<CourseManagerProps> = ({ courses, materials, onAdd
   const [uploading, setUploading] = useState(false);
   const [materialData, setMaterialData] = useState({ title: '', course_id: '', type: 'pdf' as 'note' | 'pdf', content: '' });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [fileNotice, setFileNotice] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fileToBase64 = (file: File): Promise<string> => {
@@ -43,6 +45,7 @@ const CourseManager: React.FC<CourseManagerProps> = ({ courses, materials, onAdd
     const file = e.target.files?.[0];
     if (file) {
       setSelectedFile(file);
+      setFileNotice('');
       const isPdf = file.type === 'application/pdf';
       
       setMaterialData(prev => ({
@@ -55,12 +58,25 @@ const CourseManager: React.FC<CourseManagerProps> = ({ courses, materials, onAdd
         if (file.type === 'text/plain') {
           const text = await file.text();
           setMaterialData(prev => ({ ...prev, content: text.substring(0, 30000) }));
+        } else if (isPdf || file.name.toLowerCase().endsWith('.pdf')) {
+          try {
+            const text = await extractTextFromPdf(file);
+            setMaterialData(prev => ({ ...prev, content: text.substring(0, 30000) }));
+          } catch (err: any) {
+            const base64 = await fileToBase64(file);
+            setMaterialData(prev => ({ ...prev, content: base64 }));
+            setFileNotice('This PDF was stored successfully. It may have limited use for grounded assessment generation until readable text is available.');
+          }
         } else {
           const base64 = await fileToBase64(file);
           setMaterialData(prev => ({ ...prev, content: base64 }));
+          setFileNotice('This file will be stored in the academic vault, but it may not be used directly for grounded assessment generation.');
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("File processing error:", err);
+        const fallbackBase64 = await fileToBase64(file);
+        setMaterialData(prev => ({ ...prev, content: fallbackBase64 }));
+        setFileNotice('The file was kept for vault storage, but preprocessing failed. It may not be usable for assessment grounding.');
       }
     }
   };
@@ -142,15 +158,20 @@ const CourseManager: React.FC<CourseManagerProps> = ({ courses, materials, onAdd
                 onClick={() => fileInputRef.current?.click()}
                 className={`border-2 border-dashed rounded-3xl p-8 text-center cursor-pointer transition-all group ${selectedFile ? 'border-cyan-500 bg-cyan-500/5' : 'border-white/10 hover:border-cyan-500/30 hover:bg-white/5'}`}
               >
-                <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept=".pdf,.txt" />
+                <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" />
                 <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-4 transition-colors ${selectedFile ? 'bg-cyan-500 text-slate-900' : 'bg-white/5 text-slate-500 group-hover:text-cyan-400'}`}>
                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                 </div>
                 <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest truncate max-w-xs mx-auto">
                   {selectedFile ? selectedFile.name : 'Select Curriculum Node'}
                 </p>
-                <p className="text-[9px] text-slate-600 mt-2 uppercase tracking-tighter">Support: PDF, TXT (MAX 10MB)</p>
+                <p className="text-[9px] text-slate-600 mt-2 uppercase tracking-tighter">All file types supported for vault storage</p>
               </div>
+              {fileNotice && (
+                <p className="text-[10px] text-amber-400 font-bold uppercase tracking-wide">
+                  {fileNotice}
+                </p>
+              )}
 
               <div className="space-y-4">
                 <div>

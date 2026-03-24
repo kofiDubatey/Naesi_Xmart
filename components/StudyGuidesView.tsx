@@ -4,6 +4,7 @@ import { Material, StudyGuide, Course, Quiz, QuizQuestion, QuizSettings } from '
 import { generateStudyGuide, generateQuizFromGuide } from '../services/geminiService';
 import { supabase } from '../supabaseClient';
 import { ICONS } from '../constants';
+import { insertQuiz } from '../services/quizPersistence';
 
 interface StudyGuidesViewProps {
   materials: Material[];
@@ -126,7 +127,7 @@ const StudyGuidesView: React.FC<StudyGuidesViewProps> = ({
     }
 
     try {
-      const { data, error } = await supabase.from('quizzes').insert({
+      const data = await insertQuiz({
         user_id: userId,
         course_id: sourceMaterial.course_id,
         material_id: sourceMaterial.id,
@@ -134,9 +135,7 @@ const StudyGuidesView: React.FC<StudyGuidesViewProps> = ({
         questions: questions,
         deadline: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString(),
         completed: false
-      }).select().single();
-
-      if (error) throw error;
+      });
       
       setQuizzes(prev => [data, ...prev]);
       awardPoints(useExistingQuestions ? 50 : 150, useExistingQuestions ? "Assessment Generated from Protocol" : "Full Assessment Synthesized from Protocol");

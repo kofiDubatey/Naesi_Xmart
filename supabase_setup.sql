@@ -113,6 +113,12 @@ DO $$ BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='quizzes' AND column_name='courseId') THEN
     ALTER TABLE public.quizzes RENAME COLUMN "courseId" TO course_id;
   END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='quizzes' AND column_name='material_id') THEN
+    ALTER TABLE public.quizzes ADD COLUMN material_id uuid REFERENCES public.materials(id) ON DELETE SET NULL;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='quizzes' AND column_name='deadline') THEN
+    ALTER TABLE public.quizzes ADD COLUMN deadline text;
+  END IF;
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='quizzes' AND column_name='completed') THEN
     ALTER TABLE public.quizzes ADD COLUMN completed boolean DEFAULT false;
   END IF;

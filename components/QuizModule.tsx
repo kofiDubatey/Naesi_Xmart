@@ -5,6 +5,8 @@ import { getFeedback, generateProfessionalPharmacyQuiz, analyzeClinicalPath } fr
 import { supabase } from '../supabaseClient';
 import { ICONS } from '../constants';
 import FormattedText from './FormattedText';
+import { insertQuiz } from '../services/quizPersistence';
+import { extractTextFromPdf, extractTextFromPdfBlob, extractTextFromPdfDataUrl, hasUsableGroundingText, isPdfDataUrl } from '../services/documentText';
 
 interface QuizModuleProps {
   quizzes: Quiz[];
@@ -36,6 +38,7 @@ const QuizModule: React.FC<QuizModuleProps> = ({ quizzes, setQuizzes, activeQuiz
   const [isGenerating, setIsGenerating] = useState(false);
   const [sessionFile, setSessionFile] = useState<File | null>(null);
   const [sessionFileContent, setSessionFileContent] = useState<string>('');
+  const [sessionFileError, setSessionFileError] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const activeQuiz = quizzes.find(q => q.id === activeQuizId) || null;
@@ -56,18 +59,60 @@ const QuizModule: React.FC<QuizModuleProps> = ({ quizzes, setQuizzes, activeQuiz
     await supabase.from('quizzes').update(updates).eq('id', activeQuizId);
   };
 
+  const resolveMaterialContext = async (courseId: string) => {
+    const courseMaterials = materials.filter(m => m.course_id === courseId);
+    const resolved = await Promise.all(courseMaterials.map(async material => {
+      if (hasUsableGroundingText(material.content)) {
+        return material.content;
+      }
+
+      if (isPdfDataUrl(material.content)) {
+        try {
+          const extracted = await extractTextFromPdfDataUrl(material.content);
+          await supabase.from('materials').update({ content: extracted.substring(0, 30000) }).eq('id', material.id);
+          return extracted;
+        } catch (err) {
+          console.error('Vault base64 PDF extraction failed', material.title, err);
+        }
+      }
+
+      if (material.type === 'pdf' && material.file_url) {
+        try {
+          const response = await fetch(material.file_url);
+          if (!response.ok) return '';
+          const blob = await response.blob();
+          const extracted = await extractTextFromPdfBlob(blob);
+          await supabase.from('materials').update({ content: extracted.substring(0, 30000) }).eq('id', material.id);
+          return extracted;
+        } catch (err) {
+          console.error('Vault PDF extraction failed', material.title, err);
+        }
+      }
+
+      return '';
+    }));
+
+    return resolved.filter(hasUsableGroundingText);
+  };
+
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setSessionFile(file);
+      setSessionFileError('');
       try {
          if (file.type === 'text/plain') {
             const text = await file.text();
             setSessionFileContent(text);
+         } else if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+            const text = await extractTextFromPdf(file);
+            setSessionFileContent(text);
          } else {
-            setSessionFileContent(`[SESSION_DOC: ${file.name} (Binary)]`);
+            throw new Error('UNSUPPORTED_GROUNDING_FILE: Only .txt and text-based .pdf files are supported.');
          }
-      } catch (err) {
+      } catch (err: any) {
+         setSessionFileContent('');
+         setSessionFileError(err.message || 'Grounding file could not be read.');
          console.error("Session file error", err);
       }
     }
@@ -93,7 +138,11 @@ const QuizModule: React.FC<QuizModuleProps> = ({ quizzes, setQuizzes, activeQuiz
         const feedback = await getFeedback(scoreCount, activeQuiz.questions.length, activeQuiz.title);
         setAiFeedback(feedback);
       } catch { setAiFeedback("Analysis logged."); }
-      finally { setLoadingFeedback(false); }
+      finally {
+        setLoadingFeedback(false);
+        setViewMode('history');
+        setActiveQuizId(null);
+      }
     }
   };
 
@@ -117,8 +166,23 @@ const QuizModule: React.FC<QuizModuleProps> = ({ quizzes, setQuizzes, activeQuiz
     setIsGenerating(true);
     try {
       const course = courses.find(c => c.id === setupCourseId)!;
-      const vaultMaterials = materials.filter(m => m.course_id === setupCourseId).map(m => m.content);
-      const allContext = sessionFileContent ? [...vaultMaterials, sessionFileContent] : vaultMaterials;
+      const courseMaterials = materials.filter(m => m.course_id === setupCourseId);
+      const vaultMaterials = await resolveMaterialContext(setupCourseId);
+      const fallbackHints = courseMaterials.map(material => {
+        const parts = [
+          material.title,
+          material.type ? `type: ${material.type}` : '',
+          material.file_url ? 'file attached in module vault' : '',
+          hasUsableGroundingText(material.content) ? '' : 'limited readable text available'
+        ].filter(Boolean);
+        return parts.join(' | ');
+      });
+
+      const lowContextModuleInput = vaultMaterials.length > 0 ? vaultMaterials : fallbackHints;
+      const allContext = [
+        ...lowContextModuleInput,
+        ...(sessionFileContent ? [sessionFileContent] : [])
+      ].filter(Boolean);
       
       const questions = await generateProfessionalPharmacyQuiz(
         course.name, 
@@ -127,24 +191,24 @@ const QuizModule: React.FC<QuizModuleProps> = ({ quizzes, setQuizzes, activeQuiz
         quizSettings.preferredDifficulty
       );
 
-      if (questions.length > 0) {
-        const { data, error } = await supabase.from('quizzes').insert({
-          user_id: userId,
-          course_id: setupCourseId,
-          title: `Professional Evaluation: ${course.name}`,
-          questions: questions,
-          deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString(),
-          completed: false
-        }).select().single();
+      if (questions.length === 0) {
+        throw new Error("No questions were generated. Check the Gemini API key, quota, and browser console logs.");
+      }
 
-        if (data) {
-          setQuizzes(prev => [data, ...prev]);
-          setActiveQuizId(data.id);
-          setViewMode('active');
-          awardPoints(100, "Synthesis Protocol Success");
-        } else if (error) {
-           throw error;
-        }
+      const data = await insertQuiz({
+        user_id: userId,
+        course_id: setupCourseId,
+        title: `Professional Evaluation: ${course.name}`,
+        questions: questions,
+        deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString(),
+        completed: false
+      });
+
+      if (data) {
+        setQuizzes(prev => [data, ...prev]);
+        setActiveQuizId(data.id);
+        setViewMode('active');
+        awardPoints(100, "Synthesis Protocol Success");
       }
     } catch (err: any) {
       alert(`SYNTHESIS_ERROR: ${err.message}`);
@@ -185,8 +249,13 @@ const QuizModule: React.FC<QuizModuleProps> = ({ quizzes, setQuizzes, activeQuiz
                     <p className="text-xs font-bold text-slate-300 uppercase tracking-tight">
                        {sessionFile ? sessionFile.name : 'Link Additional Document'}
                     </p>
-                    <p className="text-[9px] text-slate-500 mt-2 uppercase">PDF Context for Specific Synthesis</p>
+                    <p className="text-[9px] text-slate-500 mt-2 uppercase">TXT or text-based PDF context for grounded synthesis</p>
                   </div>
+                  {sessionFileError && (
+                    <p className="mt-3 text-[10px] text-pink-400 font-bold uppercase tracking-wide">
+                      {sessionFileError}
+                    </p>
+                  )}
                </div>
 
                <button 
