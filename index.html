@@ -6,12 +6,20 @@
     <title>Naesi Xmart | AI-Powered Pharmacy Academy</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <script>
+      (function() {
+        var theme = localStorage.getItem('naesi-theme') === 'light' ? 'light' : 'dark';
+        document.documentElement.dataset.theme = theme;
+        document.documentElement.style.colorScheme = theme;
+      })();
+    </script>
     <style>
         :root {
             --neon-cyan: #22d3ee;
             --neon-indigo: #818cf8;
             --neon-pink: #f472b6;
             --bg-dark: #020617;
+            --bg-light: #f4f7fb;
         }
         body {
             font-family: 'Inter', sans-serif;

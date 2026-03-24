@@ -21,6 +21,9 @@ const AdminPortal = lazy(() => import('./components/AdminPortal'));
 
 const SUPER_ADMIN_EMAIL = 'kofidugbatey59@gmail.com';
 const ADMIN_NAME = 'Kofi Dugbatey';
+const THEME_STORAGE_KEY = 'naesi-theme';
+
+type ThemeMode = 'dark' | 'light';
 
 const ViewLoader = () => (
   <div className="flex-1 flex flex-col items-center justify-center min-h-[60vh] animate-pulse" role="status">
@@ -82,6 +85,10 @@ const ConnectionDiagnostic = ({ error }: { error?: string }) => {
 };
 
 const App: React.FC = () => {
+  const [theme, setTheme] = useState<ThemeMode>(() => {
+    if (typeof window === 'undefined') return 'dark';
+    return window.localStorage.getItem(THEME_STORAGE_KEY) === 'light' ? 'light' : 'dark';
+  });
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [dbError, setDbError] = useState<string | null>(null);
@@ -110,6 +117,17 @@ const App: React.FC = () => {
   const [showProfile, setShowProfile] = useState(false);
   const isSuperAdmin = profile?.role === 'super-admin';
   const effectiveUserId = impersonatedUserId || session?.user?.id;
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = theme;
+    document.body.dataset.theme = theme;
+    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+  }, [theme]);
+
+  const toggleTheme = useCallback(() => {
+    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  }, []);
 
   const addNotification = useCallback((notif: AppNotification) => {
     setNotifications(prev => [notif, ...prev].slice(0, 5));
@@ -284,6 +302,23 @@ const App: React.FC = () => {
           </div>
           
           <div className="flex items-center gap-3 md:gap-6">
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.25em] text-slate-400 transition-all hover:border-cyan-400/40 hover:text-cyan-400"
+              aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            >
+              {theme === 'dark' ? (
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v2.25M12 18.75V21M4.97 4.97l1.59 1.59M17.44 17.44l1.59 1.59M3 12h2.25M18.75 12H21M4.97 19.03l1.59-1.59M17.44 6.56l1.59-1.59M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
+                </svg>
+              ) : (
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12.79A9 9 0 0111.21 3a7.5 7.5 0 109.79 9.79z" />
+                </svg>
+              )}
+              <span className="hidden sm:inline">{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+            </button>
             <div className="hidden md:flex flex-col items-end">
               <p className="text-xs font-bold text-white uppercase tracking-tight">{profile?.name || 'Anonymous'}</p>
               <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">{profile?.title || 'Student'}</p>
@@ -364,6 +399,8 @@ const App: React.FC = () => {
                 temporalEvents={temporalEvents}
                 setTemporalEvents={setTemporalEvents}
                 user_id={effectiveUserId}
+                theme={theme}
+                onToggleTheme={toggleTheme}
               />
             )}
             {activeTab === 'guides' && (

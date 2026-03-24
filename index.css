@@ -1,0 +1,174 @@
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  transition: background-color 180ms ease, color 180ms ease;
+}
+
+.hud-corner {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-color: rgba(34, 211, 238, 0.35);
+  pointer-events: none;
+}
+
+.hud-tl {
+  top: 14px;
+  left: 14px;
+  border-top: 1px solid currentColor;
+  border-left: 1px solid currentColor;
+}
+
+.hud-tr {
+  top: 14px;
+  right: 14px;
+  border-top: 1px solid currentColor;
+  border-right: 1px solid currentColor;
+}
+
+.hud-bl {
+  bottom: 14px;
+  left: 14px;
+  border-bottom: 1px solid currentColor;
+  border-left: 1px solid currentColor;
+}
+
+.hud-br {
+  right: 14px;
+  bottom: 14px;
+  border-right: 1px solid currentColor;
+  border-bottom: 1px solid currentColor;
+}
+
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(34, 211, 238, 0.35) transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.25);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(34, 211, 238, 0.45);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+html[data-theme='light'] body {
+  background: #f4f7fb;
+  color: #0f172a;
+}
+
+html[data-theme='light'] .bg-mesh {
+  background:
+    radial-gradient(circle at 20% 20%, rgba(34, 211, 238, 0.18) 0%, transparent 38%),
+    radial-gradient(circle at 80% 10%, rgba(129, 140, 248, 0.16) 0%, transparent 35%),
+    linear-gradient(rgba(148, 163, 184, 0.14) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.14) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 44px 44px, 44px 44px;
+}
+
+html[data-theme='light'] .glass {
+  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(148, 163, 184, 0.18);
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
+}
+
+html[data-theme='light'] #error-overlay {
+  background: #e2e8f0;
+  color: #be123c;
+}
+
+html[data-theme='light'] [class~="bg-slate-950"],
+html[data-theme='light'] [class~="bg-slate-950/80"],
+html[data-theme='light'] [class~="bg-slate-900"],
+html[data-theme='light'] [class~="bg-slate-900/20"],
+html[data-theme='light'] [class~="bg-slate-900/40"],
+html[data-theme='light'] [class~="bg-slate-900/50"],
+html[data-theme='light'] [class~="bg-slate-900/60"],
+html[data-theme='light'] [class~="bg-slate-800"],
+html[data-theme='light'] [class~="bg-black/40"],
+html[data-theme='light'] [class~="bg-black/60"],
+html[data-theme='light'] [class~="bg-black/90"],
+html[data-theme='light'] [class~="bg-black/95"],
+html[data-theme='light'] [class~="bg-white/5"],
+html[data-theme='light'] [class~="bg-white/10"],
+html[data-theme='light'] [class~="bg-white/[0.02]"] {
+  background-color: rgba(255, 255, 255, 0.7) !important;
+}
+
+html[data-theme='light'] [class~="text-white"],
+html[data-theme='light'] [class~="text-slate-200"],
+html[data-theme='light'] [class~="text-slate-100"],
+html[data-theme='light'] [class~="text-slate-300"] {
+  color: #0f172a !important;
+}
+
+html[data-theme='light'] [class~="text-slate-400"] {
+  color: #475569 !important;
+}
+
+html[data-theme='light'] [class~="text-slate-500"] {
+  color: #64748b !important;
+}
+
+html[data-theme='light'] [class~="text-slate-600"],
+html[data-theme='light'] [class~="text-slate-700"] {
+  color: #94a3b8 !important;
+}
+
+html[data-theme='light'] [class~="border-white/5"],
+html[data-theme='light'] [class~="border-white/10"],
+html[data-theme='light'] [class~="border-white/20"],
+html[data-theme='light'] [class~="border-white/30"] {
+  border-color: rgba(148, 163, 184, 0.2) !important;
+}
+
+html[data-theme='light'] [class~="from-slate-950"],
+html[data-theme='light'] [class~="via-slate-900/40"] {
+  --tw-gradient-from: rgba(255, 255, 255, 0.96) var(--tw-gradient-from-position) !important;
+  --tw-gradient-to: rgba(255, 255, 255, 0) var(--tw-gradient-to-position) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), rgba(255, 255, 255, 0.72) var(--tw-gradient-via-position), var(--tw-gradient-to) !important;
+}
+
+html[data-theme='light'] [class~="hover:text-white"]:hover {
+  color: #0f172a !important;
+}
+
+html[data-theme='light'] input:not([type='range']),
+html[data-theme='light'] select,
+html[data-theme='light'] textarea {
+  background: rgba(255, 255, 255, 0.9) !important;
+  color: #0f172a !important;
+  border-color: rgba(148, 163, 184, 0.28) !important;
+}
+
+html[data-theme='light'] input::placeholder,
+html[data-theme='light'] textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+html[data-theme='light'] button {
+  transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+html[data-theme='light'] .custom-scrollbar {
+  scrollbar-color: rgba(14, 165, 233, 0.35) transparent;
+}

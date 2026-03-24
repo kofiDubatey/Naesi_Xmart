@@ -15,6 +15,8 @@ interface SettingsViewProps {
   temporalEvents: TemporalEvent[];
   setTemporalEvents: (evts: TemporalEvent[]) => void;
   user_id?: string;
+  theme: 'dark' | 'light';
+  onToggleTheme: () => void;
 }
 
 const SettingsView: React.FC<SettingsViewProps> = ({ 
@@ -27,7 +29,9 @@ const SettingsView: React.FC<SettingsViewProps> = ({
   quizzes, 
   temporalEvents, 
   setTemporalEvents, 
-  user_id 
+  user_id,
+  theme,
+  onToggleTheme
 }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
@@ -174,6 +178,30 @@ const SettingsView: React.FC<SettingsViewProps> = ({
         <div className={`flex items-center gap-2 px-4 py-1.5 rounded-full border text-[9px] font-bold uppercase tracking-[0.2em] transition-all ${isSyncing ? 'border-cyan-500/50 bg-cyan-500/10 text-cyan-400 animate-pulse' : 'border-white/5 bg-slate-900/40 text-slate-500'}`}>
            <div className={`w-1.5 h-1.5 rounded-full ${isSyncing ? 'bg-cyan-400' : 'bg-green-500'}`}></div>
            {isSyncing ? 'Syncing_to_Cloud...' : 'Cloud_Preferences_Linked'}
+        </div>
+      </div>
+
+      <div className="glass p-8 rounded-[40px] border border-amber-500/20 relative overflow-hidden bg-gradient-to-br from-amber-500/10 to-transparent">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-2xl bg-amber-500/15 text-amber-500 border border-amber-500/20">
+              <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v2.25M12 18.75V21M4.97 4.97l1.59 1.59M17.44 17.44l1.59 1.59M3 12h2.25M18.75 12H21M4.97 19.03l1.59-1.59M17.44 6.56l1.59-1.59M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-2xl font-bold font-space text-white uppercase tracking-tighter">Visual Preference Matrix</h3>
+              <p className="text-slate-500 text-[10px] uppercase font-bold tracking-[0.3em]">Switch between dark and light workspace themes</p>
+            </div>
+          </div>
+
+          <button
+            onClick={onToggleTheme}
+            className="flex items-center justify-center gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-6 py-4 text-[10px] font-bold uppercase tracking-[0.3em] text-amber-500 transition-all hover:bg-amber-500/20 hover:text-amber-400"
+          >
+            <span className={`inline-flex h-2.5 w-2.5 rounded-full ${theme === 'light' ? 'bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.7)]' : 'bg-slate-500'}`}></span>
+            {theme === 'light' ? 'Switch To Dark Mode' : 'Switch To Light Mode'}
+          </button>
         </div>
       </div>
 
